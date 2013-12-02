@@ -1,0 +1,10 @@
+{
+    "framework": "jasmine",
+    "src_files": [
+        "./foreground/util.js",
+        "./foreground/my_restify.js",
+        "./foreground/jquery-2.0.0.min.js",
+        "./test/models/test_util.js",
+        "./test/models/test_my_restify.js"
+    ]
+}
