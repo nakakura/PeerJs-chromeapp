@@ -1,8 +1,6 @@
 ///<reference path="./peerjs_server.ts"/>
 
-declare var chrome;
-
-var peer = new PeerJsServer(new PeerJsOptions());
+var peer = PeerJsServer.getInstance(new PeerJsOptions());
 
 /*
 chrome.runtime.getBackgroundPage(function(bgPage) {

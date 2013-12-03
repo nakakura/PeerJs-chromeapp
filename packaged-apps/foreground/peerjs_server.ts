@@ -31,26 +31,29 @@ class PeerJsServer {
     private _wss: WebSocketServer;
 
     constructor(private _options: PeerJsOptions) {
+        console.log("constructor");
         if(PeerJsServer._instance){
             throw new Error("Error: Instantiation failed: Use SingletonDemo.getInstance() instead of new.");
         }
         PeerJsServer._instance = this;
-
-        console.log(Util);
-
-        Util.debug = _options.debug;
-        this._app = new MyRestify();
-        this._clients = {};
-        this._outstanding = {};
-        this._initializeWSS();
-        this._initializeHTTP();
-        this._ips = {};
-        this._setCleanupIntervals();
     }
 
     public static getInstance(option: PeerJsOptions):PeerJsServer{
+        console.log("getInstance");
         if(PeerJsServer._instance === null) {
             PeerJsServer._instance = new PeerJsServer(option);
+            console.log("peerjs1");
+
+            console.log(Util);
+
+            Util.debug = option.debug;
+            PeerJsServer._instance._app = new MyRestify();
+            PeerJsServer._instance._clients = {};
+            PeerJsServer._instance._outstanding = {};
+            PeerJsServer._instance._initializeWSS();
+            PeerJsServer._instance._initializeHTTP();
+            PeerJsServer._instance._ips = {};
+            PeerJsServer._instance._setCleanupIntervals();
         }
         return PeerJsServer._instance;
     }
@@ -58,9 +61,11 @@ class PeerJsServer {
     private _initializeWSS(){
         var self = this;
         // Create WebSocket server as well.
+        console.log("wss1");
         this._wss = new WebSocketServer({ path: '/peerjs', server: this._app});
-
+        console.log("wss2");
         this._wss.on('connection', function(socket, query) {
+            console.log("wss3");
             var id = query['id'];
             var token = query['token'];
             var key = query['key'];
@@ -72,21 +77,32 @@ class PeerJsServer {
                 return;
             }
 
+            console.log("wss4");
             if (!self._clients[key] || !self._clients[key][id]) {
+                console.log("wss5");
                 self._checkKey(key, ip, function(err) {
+                    console.log("wss6");
                     if (!err) {
+                        console.log("wss7");
                         if (!self._clients[key][id]) {
+                            console.log("wss8");
                             self._clients[key][id] = { token: token, ip: ip };
                             self._ips[ip]++;
+                            console.log("wss8.1");
                             socket.send(JSON.stringify({ type: 'OPEN' }));
+                            console.log("wss8.2");
                         }
                         self._configureWS(socket, key, id, token);
+                        console.log("wss8.3");
                     } else {
+                        console.log("wss9");
                         socket.send(JSON.stringify({ type: 'ERROR', payload: { msg: err } }));
                     }
                 });
             } else {
+                console.log("wss10");
                 self._configureWS(socket, key, id, token);
+                console.log("wss11");
             }
         });
     }
@@ -111,18 +127,21 @@ class PeerJsServer {
 
         this._processOutstanding(key, id);
 
-        // Cleanup after a socket closes.
-        socket.on('close', function() {
+        console.log("configure1");
+        // Cleanup after a socket closes.A
+
+        socket.addEventListener('close', function() {
             Util.log('Socket closed:', id);
             if (client.socket == socket) {
                 self._removePeer(key, id);
             }
         });
 
-        // Handle messages from peers.
-        socket.on('message', function(data) {
+        console.log("configure2");
+
+        socket.addEventListener('message', function(e) {
             try {
-                var message = JSON.parse(data);
+                var message = JSON.parse(e.data);
 
                 if (['LEAVE', 'CANDIDATE', 'OFFER', 'ANSWER'].indexOf(message.type) !== -1) {
                     self._handleTransmission(key, {
@@ -135,7 +154,7 @@ class PeerJsServer {
                     Util.prettyError('Message unrecognized');
                 }
             } catch(e) {
-                Util.log('Invalid message', data);
+                Util.log('Invalid message', e.data);
                 throw e;
             }
         });
@@ -177,18 +196,22 @@ class PeerJsServer {
 
         // Retrieve guaranteed random ID.
         this._app.get('/:key/id', function(req, res, next) {
+            console.log('もどってきてる');
+            console.log(req);
             res.contentType = 'text/html';
-            res.send(self._generateClientId(req.params.key));
+            res.send(self._generateClientId(req['params']['key']));
             return next();
         });
 
         // Server sets up HTTP streaming when you get post an ID.
-        this._app.post('/:key/:id/:token/id', function(req, res, next) {
-            var id = req.params.id;
-            var token = req.params.token;
-            var key = req.params.key;
-            var ip = req.connection.remoteAddress;
-
+        this._app.get('/:key/:id/:token/id', function(req, res, next) {
+            console.log("post");
+            console.log(req);
+            var id = req['params']['id'];
+            var token = req['params']['token'];
+            var key = req['params']['key'];
+            var ip = req['params']['remoteAddress'];
+            console.log(ip);
             if (!self._clients[key] || !self._clients[key][id]) {
                 self._checkKey(key, ip, function(err) {
                     if (!err && !self._clients[key][id]) {
@@ -206,6 +229,7 @@ class PeerJsServer {
         });
 
         var handle = function(req, res, next) {
+            console.log("handle");
             var key = req.params.key;
             var id = req.params.id;
 
@@ -227,10 +251,10 @@ class PeerJsServer {
                 return;
             } else {
                 self._handleTransmission(key, {
-                    type: req.body.type,
+                    type: req.body['type'],
                     src: id,
-                    dst: req.body.dst,
-                    payload: req.body.payload
+                    dst: req.body['dst'],
+                    payload: req.body['payload']
                 });
                 res.send(200);
             }
@@ -252,23 +276,35 @@ class PeerJsServer {
     }
 
     private _startStreaming(res: any, key: string, id: string, token: string, open: boolean): void{
+        console.log("startstreaming1");
         var self = this;
 
-        res.writeHead(200, {'Content-Type': 'application/octet-stream'});
+        res.writeHead(200,
+            {'Content-Type': 'application/octet-stream',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            }
+        );
 
         var pad = '00';
         for (var i = 0; i < 10; i++) {
             pad += pad;
         }
         res.write(pad + '\n');
-
+        console.log("startstreaming2");
         if (open) {
             res.write(JSON.stringify({ type: 'OPEN' }) + '\n');
         }
 
         var client = this._clients[key][id];
-
+        console.log("startstreaming3");
+        console.log(token);
+        console.log(client);
         if (token === client.token) {
+            console.log("startstreaming4");
+            console.log(res);
+            /*
             // Client already exists
             res.on('close', function() {
                 if (client.res === res) {
@@ -280,9 +316,11 @@ class PeerJsServer {
                     delete client.res;
                 }
             });
+            */
             client.res = res;
             this._processOutstanding(key, id);
         } else {
+            console.log("startstreaming5");
             // ID-taken, invalid token
             res.end(JSON.stringify({ type: 'HTTP-ERROR' }));
         }

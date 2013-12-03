@@ -17,18 +17,18 @@ var WebSocketServer = (function () {
         }
     }
     WebSocketServer.prototype.on = function (method, callback) {
+        console.log("on");
+        console.log(method);
         this._callback[method] = callback;
+        console.log(this._callback);
         if (method == "connection") {
-            this._webSockServer.addEventListener('request', this._onRequest);
+            this._webSockServer.addEventListener('request', this._onRequest.bind(this));
         }
     };
 
     WebSocketServer.prototype._onRequest = function (req) {
-        console.log('Client connected');
-        console.log(req);
-
         var socket = req.accept();
-        var query = Util.parseUrl(req.headers.uri);
+        var query = ParseUri.parseUrl(req.headers.url);
         var self = this;
 
         chrome.socket.getInfo(socket._socketId, function (socketInfo) {
@@ -36,18 +36,23 @@ var WebSocketServer = (function () {
             self._callback['connection'](socket, query);
         });
 
-        socket.addEventListener('message', this._onMessage);
-        socket.addEventListener('close', this._onClose);
+        console.log("addevent");
+        socket.addEventListener('message', this._onMessage.bind(this));
+        socket.addEventListener('close', this._onClose.bind(this));
 
         return true;
     };
 
     WebSocketServer.prototype._onMessage = function (e) {
+        console.log("onmessage");
         console.log(e.data);
         this._callback['message'](e.data);
     };
 
     WebSocketServer.prototype._onClose = function () {
+        console.log("close");
+        console.log(this);
+        console.log(this._callback);
         this._callback['close']();
     };
     return WebSocketServer;

@@ -23,8 +23,14 @@ var Util = (function () {
             console.log.apply(console, message);
         }
     };
+    Util.debug = false;
+    return Util;
+})();
 
-    Util.chompNull = function (array) {
+var ParseUri = (function () {
+    function ParseUri() {
+    }
+    ParseUri.chompNull = function (array) {
         function sub(counter, subArray) {
             if (counter >= subArray.length)
                 return subArray;
@@ -34,20 +40,18 @@ else if (subArray[counter] === "") {
             } else {
                 return sub(counter + 1, subArray);
             }
-
-            return subArray;
         }
 
         return sub(0, array);
     };
 
-    Util.parseDir = function (path) {
+    ParseUri.parseDir = function (path) {
         var array = path.split("/");
-        return Util.chompNull(array);
+        return ParseUri.chompNull(array);
     };
 
-    Util.targetParams = function (src) {
-        var array = Util.parseDir(src);
+    ParseUri.targetParams = function (src) {
+        var array = ParseUri.parseDir(src);
         var keyArray = [];
         var counterArray = [];
 
@@ -58,48 +62,70 @@ else if (subArray[counter] === "") {
             }
         });
 
-        return new ParseTargetItem(keyArray, counterArray);
+        var item = new ParseTargetItem(array, keyArray, counterArray);
+        item.srcPath = src;
+        return item;
     };
 
-    Util.parseParams = function (src, targets) {
-        var array = Util.parseDir(src);
-        var keyArray = [];
-        var counterArray = [];
+    ParseUri.isMatchParams = function (src, target) {
+        var array = ParseUri.parseDir(src);
+        if (array.length != target.srcParams.length)
+            return false;
+else if (array[array.length - 1].indexOf(target.method()) !== 0)
+            return false;
+        return true;
+    };
 
-        jQuery.each(array, function (i, item) {
-            if (item.indexOf(":") == 0) {
-                keyArray.push(item.substr(1));
-                counterArray.push(i);
-            }
+    ParseUri.parseParams = function (src, target) {
+        var array = ParseUri.parseDir(src);
+        var retHash = {};
+        jQuery.each(target.targetPos, function (i, item) {
+            retHash[target.targetKeys[i]] = array[item];
         });
-
-        return new ParseTargetItem(keyArray, counterArray);
+        return retHash;
     };
 
-    Util.parseUrl = function (url) {
+    ParseUri.matchParseItem = function (src, targets) {
+        function subParseParams(counter, src, targets) {
+            if (counter >= targets.length)
+                return null;
+else if (ParseUri.isMatchParams(src, targets[counter])) {
+                return targets[counter];
+            }
+            return subParseParams(counter + 1, src, targets);
+        }
+
+        return subParseParams(0, src, targets);
+    };
+
+    ParseUri.parseUrl = function (url) {
         function parseItem(counter, itemArray) {
             if (itemArray.length == 0 || counter >= itemArray.length)
                 return {};
 
-            var params = itemArray[counter].split("?");
+            var params = itemArray[counter].split("=");
             var hash = {};
             if (params.length == 2)
                 hash[params[0]] = params[1];
             return jQuery.extend(hash, parseItem(counter + 1, itemArray));
         }
 
-        var paramArray = url.split("=");
+        var params = url.split("?");
+        var paramArray = params[1].split("&");
         return parseItem(0, paramArray);
     };
-    Util.debug = false;
-    return Util;
+    return ParseUri;
 })();
 
 var ParseTargetItem = (function () {
-    function ParseTargetItem(targetKeys, targetPos) {
+    function ParseTargetItem(srcParams, targetKeys, targetPos) {
+        this.srcParams = srcParams;
         this.targetKeys = targetKeys;
         this.targetPos = targetPos;
     }
+    ParseTargetItem.prototype.method = function () {
+        return this.srcParams[this.srcParams.length - 1];
+    };
     return ParseTargetItem;
 })();
 //# sourceMappingURL=util.js.map

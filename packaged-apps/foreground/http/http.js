@@ -130,7 +130,7 @@ var Http;
             var self = this;
             var requestData = '';
             var endIndex = 0;
-            var onDataRead = function (readInfo) {
+            function onDataRead(readInfo) {
                 if (readInfo.resultCode <= 0) {
                     _socket.disconnect(socketId);
                     _socket.destroy(socketId);
@@ -160,8 +160,12 @@ var Http;
                         headerMap[requestLine[0]] = requestLine[1].trim();
                 }
                 var request = new HttpRequest(headerMap, socketId);
-                self._onRequest(request);
-            };
+                console.log(request);
+                chrome.socket.getInfo(socketId, function (socketInfo) {
+                    request.remoteAddress = socketInfo['peerAddress'];
+                    self._onRequest(request);
+                });
+            }
             _socket.read(socketId, onDataRead);
         };
 
@@ -185,6 +189,8 @@ else if (keepAlive)
         __extends(HttpRequest, _super);
         function HttpRequest(headers, socketId) {
             _super.call(this);
+            this.contentType = "";
+            this.remoteAddress = "";
             this.extensionTypes = {
                 'css': 'text/css',
                 'html': 'text/html',
@@ -227,6 +233,8 @@ else if (keepAlive)
                 headerString += '\r\n' + i + ': ' + responseHeaders[i];
             }
             headerString += '\r\n\r\n';
+            console.log("writehead");
+            console.log(headerString);
             this._write(stringToArrayBuffer(headerString));
         };
 
@@ -280,7 +288,10 @@ else if (keepAlive)
                     contentLength = (this.response && this.response.byteLength) || 0;
                 t.writeHead(this.status, {
                     'Content-Type': type,
-                    'Content-Length': contentLength
+                    'Content-Length': contentLength,
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
+                    'Access-Control-Allow-Headers': 'Content-Type'
                 });
                 t.end(this.response);
             };
@@ -306,6 +317,17 @@ else if (keepAlive)
             if (!this._finished || this.bytesRemaining > 0)
                 return;
             this.close();
+        };
+
+        HttpRequest.prototype.send = function (message) {
+            this.writeHead(200, {
+                'Content-Type': this.contentType,
+                'Content-Length': message.length,
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            });
+            this.write(message);
         };
         return HttpRequest;
     })(EventSource);
@@ -378,6 +400,9 @@ else if (keepAlive)
             };
             if (this.headers['Sec-WebSocket-Protocol'])
                 responseHeader['Sec-WebSocket-Protocol'] = this.headers['Sec-WebSocket-Protocol'];
+            responseHeader['Access-Control-Allow-Origin'] = '*';
+            responseHeader['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE';
+            responseHeader['Access-Control-Allow-Headers'] = 'Content-Type';
             this.writeHead(101, responseHeader);
             var socket = new WebSocketServerSocket(this._socketId);
 

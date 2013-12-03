@@ -124,7 +124,7 @@ module Http{
             var self: HttpServer = this;
             var requestData: string = '';
             var endIndex: number = 0;
-            var onDataRead = function(readInfo) {
+            function onDataRead(readInfo) {
                 // Check if connection closed.
                 if (readInfo.resultCode <= 0) {
                     _socket.disconnect(socketId);
@@ -153,7 +153,11 @@ module Http{
                         headerMap[requestLine[0]] = requestLine[1].trim();
                 }
                 var request: HttpRequest = new HttpRequest(headerMap, socketId);
-                self._onRequest(request);
+                console.log(request);
+                chrome.socket.getInfo(socketId, function (socketInfo) {
+                    request.remoteAddress = socketInfo['peerAddress'];
+                    self._onRequest(request);
+                });
             }
             _socket.read(socketId, onDataRead);
         }
@@ -182,6 +186,9 @@ module Http{
         bytesRemaining: number;
         _finished: boolean;
         readyState: number;
+        contentType: string = "";
+        remoteAddress: string = "";
+
         extensionTypes: {[key: string]: string} =
         {
             'css': 'text/css',
@@ -230,6 +237,8 @@ module Http{
                 headerString += '\r\n' + i + ': ' + responseHeaders[i];
             }
             headerString += '\r\n\r\n';
+            console.log("writehead");
+            console.log(headerString);
             this._write(stringToArrayBuffer(headerString));
         }
 
@@ -283,7 +292,11 @@ module Http{
                     contentLength = (this.response && this.response.byteLength) || 0;
                 t.writeHead(this.status, {
                     'Content-Type': type,
-                    'Content-Length': contentLength});
+                    'Content-Length': contentLength,
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                });
                 t.end(this.response);
             };
             xhr.open('GET', url, true);
@@ -308,6 +321,17 @@ module Http{
             if (!this._finished || this.bytesRemaining > 0)
                 return;
             this.close();
+        }
+
+        public send(message: string): void{
+            this.writeHead(200, {
+                'Content-Type': this.contentType,
+                'Content-Length': message.length,
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            });
+            this.write(message);
         }
     }
 
@@ -377,6 +401,9 @@ module Http{
                 'Sec-WebSocket-Accept': responseKey};
             if (this.headers['Sec-WebSocket-Protocol'])
                 responseHeader['Sec-WebSocket-Protocol'] = this.headers['Sec-WebSocket-Protocol'];
+            responseHeader['Access-Control-Allow-Origin'] = '*';
+            responseHeader['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE';
+            responseHeader['Access-Control-Allow-Headers'] = 'Content-Type';
             this.writeHead(101, responseHeader);
             var socket: WebSocketServerSocket = new WebSocketServerSocket(this._socketId);
             // Detach the socket so that we don't use it anymore.

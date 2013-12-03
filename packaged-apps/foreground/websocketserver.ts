@@ -23,18 +23,18 @@ class WebSocketServer{
     }
 
     public on(method: string, callback: (...item: any[])=>void){
+        console.log("on");
+        console.log(method);
         this._callback[method] = callback;
+        console.log(this._callback);
         if(method == "connection") {
-            this._webSockServer.addEventListener('request', this._onRequest);
+            this._webSockServer.addEventListener('request', this._onRequest.bind(this));
         }
     }
 
     private _onRequest(req: any){
-        console.log('Client connected');
-        console.log(req);
-
         var socket = req.accept();
-        var query = Util.parseUrl(req.headers.uri);
+        var query = ParseUri.parseUrl(req.headers.url);
         var self = this;
 
         chrome.socket.getInfo(socket._socketId, function(socketInfo){
@@ -42,18 +42,23 @@ class WebSocketServer{
             self._callback['connection'](socket, query);
         });
 
-        socket.addEventListener('message', this._onMessage);
-        socket.addEventListener('close', this._onClose);
+        console.log("addevent");
+        socket.addEventListener('message', this._onMessage.bind(this));
+        socket.addEventListener('close', this._onClose.bind(this));
 
         return true;
     }
 
     private _onMessage(e: any){
+        console.log("onmessage");
         console.log(e.data);
         this._callback['message'](e.data);
     }
 
     private _onClose(){
+        console.log("close");
+        console.log(this);
+        console.log(this._callback);
         this._callback['close']();
     }
 }
