@@ -20,52 +20,31 @@ class MyRestify{
         var self = this;
 
         this._webServer.addEventListener('request', function(req: Http.HttpRequest) {
-            console.log("request-=--------");
-            console.log(req);
-            if(req.headers['method'] = 'GET') self._notifyGet(req.headers['url'], req, null);
-            else if(req.headers['method'] = 'POST') self._notifyPost(req.headers['url'], req, null, null);
-
-
-
-            /*
-             var url = req.headers.url;
-             if (url == '/')
-             url = '/index.html';
-             req.serveUrl(url);
-             */
-            // Serve the pages of this chrome application.
-
+            if(req.headers['method'] = 'GET') self._notifyGet(req.headers['url'], req);
+            else if(req.headers['method'] = 'POST') self._notifyPost(req.headers['url'], req);
             return true;
         });
     }
 
     public listen(port: number){
         this._webServer.listen(port);
-        console.log("hogehoge");
-        console.log(port);
         this._startListening();
     }
 
     public get(path: string, callback: (req: Http.HttpRequest, res: any, next: ()=>void)=>void){
-        console.log("get");
-        console.log(path);
         this._getTargetsArray.push(ParseUri.targetParams(path));
         this._getCallbackHash[path] = callback;
     }
 
     public post(path: string, callback: (req: Http.HttpRequest, res: any, next: ()=>void)=>void){
-        console.log("post");
-        console.log(path);
         this._postTargetsArray.push(ParseUri.targetParams(path));
         this._postCallbackHash[path] = callback;
     }
 
-    private _notifyGet(path: string, req: any, res: any){
+    private _notifyGet(path: string, req: Http.HttpRequest){
         var self = this;
         function next_get(path, callback){
             return function(){
-                console.log("next");
-                console.log(path);
                 self.get(path, callback);
                 self._getTargetsArray.push(ParseUri.targetParams(path));
             }
@@ -99,14 +78,10 @@ class MyRestify{
         }
   }
 
-    private _notifyPost(path: string, req: any, res: any, next: ()=>void){
-        console.log("notifypost======================");
-        console.log(path);
+    private _notifyPost(path: string, req: Http.HttpRequest){
         var self = this;
         function next_post(path, callback){
             return function(){
-                console.log("next");
-                console.log(path);
                 self.get(path, callback);
                 self._postTargetsArray.push(ParseUri.targetParams(path));
             }

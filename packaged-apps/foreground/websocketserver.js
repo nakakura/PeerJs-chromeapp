@@ -17,10 +17,7 @@ var WebSocketServer = (function () {
         }
     }
     WebSocketServer.prototype.on = function (method, callback) {
-        console.log("on");
-        console.log(method);
         this._callback[method] = callback;
-        console.log(this._callback);
         if (method == "connection") {
             this._webSockServer.addEventListener('request', this._onRequest.bind(this));
         }
@@ -34,26 +31,26 @@ var WebSocketServer = (function () {
         chrome.socket.getInfo(socket._socketId, function (socketInfo) {
             query['ip'] = socketInfo['peerAddress'];
             self._callback['connection'](socket, query);
-        });
 
-        console.log("addevent");
-        socket.addEventListener('message', this._onMessage.bind(this));
-        socket.addEventListener('close', this._onClose.bind(this));
+            socket.addEventListener('message', self._onMessage(self, socket));
+            socket.addEventListener('close', self._onClose(self, socket));
+        });
 
         return true;
     };
 
-    WebSocketServer.prototype._onMessage = function (e) {
-        console.log("onmessage");
-        console.log(e.data);
-        this._callback['message'](e.data);
+    WebSocketServer.prototype._onMessage = function (self, socket) {
+        var peerJsID = socket.peerjsID;
+        return function (e) {
+            self._callback['message'](peerJsID, e.data);
+        };
     };
 
-    WebSocketServer.prototype._onClose = function () {
-        console.log("close");
-        console.log(this);
-        console.log(this._callback);
-        this._callback['close']();
+    WebSocketServer.prototype._onClose = function (self, socket) {
+        var peerJsID = socket.peerjsID;
+        return function () {
+            self._callback['close'](peerJsID);
+        };
     };
     return WebSocketServer;
 })();

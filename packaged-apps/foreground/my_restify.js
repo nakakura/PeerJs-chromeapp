@@ -16,51 +16,33 @@ var MyRestify = (function () {
         var self = this;
 
         this._webServer.addEventListener('request', function (req) {
-            console.log("request-=--------");
-            console.log(req);
             if (req.headers['method'] = 'GET')
-                self._notifyGet(req.headers['url'], req, null);
+                self._notifyGet(req.headers['url'], req);
 else if (req.headers['method'] = 'POST')
-                self._notifyPost(req.headers['url'], req, null, null);
-
-            /*
-            var url = req.headers.url;
-            if (url == '/')
-            url = '/index.html';
-            req.serveUrl(url);
-            */
-            // Serve the pages of this chrome application.
+                self._notifyPost(req.headers['url'], req);
             return true;
         });
     };
 
     MyRestify.prototype.listen = function (port) {
         this._webServer.listen(port);
-        console.log("hogehoge");
-        console.log(port);
         this._startListening();
     };
 
     MyRestify.prototype.get = function (path, callback) {
-        console.log("get");
-        console.log(path);
         this._getTargetsArray.push(ParseUri.targetParams(path));
         this._getCallbackHash[path] = callback;
     };
 
     MyRestify.prototype.post = function (path, callback) {
-        console.log("post");
-        console.log(path);
         this._postTargetsArray.push(ParseUri.targetParams(path));
         this._postCallbackHash[path] = callback;
     };
 
-    MyRestify.prototype._notifyGet = function (path, req, res) {
+    MyRestify.prototype._notifyGet = function (path, req) {
         var self = this;
         function next_get(path, callback) {
             return function () {
-                console.log("next");
-                console.log(path);
                 self.get(path, callback);
                 self._getTargetsArray.push(ParseUri.targetParams(path));
             };
@@ -94,14 +76,10 @@ else if (req.headers['method'] = 'POST')
         }
     };
 
-    MyRestify.prototype._notifyPost = function (path, req, res, next) {
-        console.log("notifypost======================");
-        console.log(path);
+    MyRestify.prototype._notifyPost = function (path, req) {
         var self = this;
         function next_post(path, callback) {
             return function () {
-                console.log("next");
-                console.log(path);
                 self.get(path, callback);
                 self._postTargetsArray.push(ParseUri.targetParams(path));
             };

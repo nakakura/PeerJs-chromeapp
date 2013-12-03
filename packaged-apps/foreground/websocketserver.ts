@@ -23,10 +23,7 @@ class WebSocketServer{
     }
 
     public on(method: string, callback: (...item: any[])=>void){
-        console.log("on");
-        console.log(method);
         this._callback[method] = callback;
-        console.log(this._callback);
         if(method == "connection") {
             this._webSockServer.addEventListener('request', this._onRequest.bind(this));
         }
@@ -40,25 +37,25 @@ class WebSocketServer{
         chrome.socket.getInfo(socket._socketId, function(socketInfo){
             query['ip'] = socketInfo['peerAddress'];
             self._callback['connection'](socket, query);
-        });
 
-        console.log("addevent");
-        socket.addEventListener('message', this._onMessage.bind(this));
-        socket.addEventListener('close', this._onClose.bind(this));
+            socket.addEventListener('message', self._onMessage(self, socket));
+            socket.addEventListener('close', self._onClose(self, socket));
+        });
 
         return true;
     }
 
-    private _onMessage(e: any){
-        console.log("onmessage");
-        console.log(e.data);
-        this._callback['message'](e.data);
+    private _onMessage(self: WebSocketServer, socket: Http.WebSocketServerSocket){
+        var peerJsID = socket.peerjsID;
+        return function(e){
+            self._callback['message'](peerJsID, e.data);
+        }
     }
 
-    private _onClose(){
-        console.log("close");
-        console.log(this);
-        console.log(this._callback);
-        this._callback['close']();
+    private _onClose(self: WebSocketServer, socket: Http.WebSocketServerSocket){
+        var peerJsID = socket.peerjsID;
+        return function(){
+            self._callback['close'](peerJsID);
+        }
     }
 }

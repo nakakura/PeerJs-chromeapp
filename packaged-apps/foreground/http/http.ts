@@ -91,16 +91,12 @@ module Http{
         }
 
         public listen(port: number, ...opt_host: string[]): void{
-            console.log("port");
-            console.log(port);
             var t: HttpServer = this;
             _socket.create('tcp', {}, function(socketInfo) {
                 t._socketInfo = socketInfo;
                 var address: string = '0.0.0.0';
                 if(opt_host.length > 0) address = opt_host[0];
 
-                console.log("ppp");
-                console.log(port);
                 _socket.listen(t._socketInfo['socketId'], address, port, 50, function(result) {
                         t._readyState = 1;
                         t._acceptConnection(t._socketInfo['socketId']);
@@ -153,7 +149,6 @@ module Http{
                         headerMap[requestLine[0]] = requestLine[1].trim();
                 }
                 var request: HttpRequest = new HttpRequest(headerMap, socketId);
-                console.log(request);
                 chrome.socket.getInfo(socketId, function (socketInfo) {
                     request.remoteAddress = socketInfo['peerAddress'];
                     self._onRequest(request);
@@ -237,8 +232,6 @@ module Http{
                 headerString += '\r\n' + i + ': ' + responseHeaders[i];
             }
             headerString += '\r\n\r\n';
-            console.log("writehead");
-            console.log(headerString);
             this._write(stringToArrayBuffer(headerString));
         }
 
@@ -342,7 +335,6 @@ module Http{
         }
 
         private _upgradeToWebSocket(request): boolean{
-            console.log(request);
             if (request.headers['Upgrade'] != 'websocket' ||
                 !request.headers['Sec-WebSocket-Key']) {
                 return false;
@@ -416,9 +408,10 @@ module Http{
         }
     }
 
-    class WebSocketServerSocket extends EventSource{
+    export class WebSocketServerSocket extends EventSource{
         _socketId: number;
         readyState: number;
+        public peerjsID: string = "";
 
         constructor(socketId: number){
             super();

@@ -96,8 +96,6 @@ var Http;
             for (var _i = 0; _i < (arguments.length - 1); _i++) {
                 opt_host[_i] = arguments[_i + 1];
             }
-            console.log("port");
-            console.log(port);
             var t = this;
             _socket.create('tcp', {}, function (socketInfo) {
                 t._socketInfo = socketInfo;
@@ -105,8 +103,6 @@ var Http;
                 if (opt_host.length > 0)
                     address = opt_host[0];
 
-                console.log("ppp");
-                console.log(port);
                 _socket.listen(t._socketInfo['socketId'], address, port, 50, function (result) {
                     t._readyState = 1;
                     t._acceptConnection(t._socketInfo['socketId']);
@@ -160,7 +156,6 @@ var Http;
                         headerMap[requestLine[0]] = requestLine[1].trim();
                 }
                 var request = new HttpRequest(headerMap, socketId);
-                console.log(request);
                 chrome.socket.getInfo(socketId, function (socketInfo) {
                     request.remoteAddress = socketInfo['peerAddress'];
                     self._onRequest(request);
@@ -233,8 +228,6 @@ else if (keepAlive)
                 headerString += '\r\n' + i + ': ' + responseHeaders[i];
             }
             headerString += '\r\n\r\n';
-            console.log("writehead");
-            console.log(headerString);
             this._write(stringToArrayBuffer(headerString));
         };
 
@@ -340,7 +333,6 @@ else if (keepAlive)
             httpServer.addEventListener('upgrade', this._upgradeToWebSocket.bind(this));
         }
         WebSocketServer.prototype._upgradeToWebSocket = function (request) {
-            console.log(request);
             if (request.headers['Upgrade'] != 'websocket' || !request.headers['Sec-WebSocket-Key']) {
                 return false;
             }
@@ -421,6 +413,7 @@ else if (keepAlive)
         __extends(WebSocketServerSocket, _super);
         function WebSocketServerSocket(socketId) {
             _super.call(this);
+            this.peerjsID = "";
             this._socketId = socketId;
             this._readFromSocket();
         }
@@ -574,5 +567,6 @@ else if (str.length > 125)
         };
         return WebSocketServerSocket;
     })(EventSource);
+    Http.WebSocketServerSocket = WebSocketServerSocket;
 })(Http || (Http = {}));
 //# sourceMappingURL=http.js.map
