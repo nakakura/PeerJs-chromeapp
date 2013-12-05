@@ -4,9 +4,15 @@
   "manifest_version": 2,
 
   "permissions": [
+    "http://*/",
     {"socket": [
-      "tcp-connect",
-      "tcp-listen"]}],
+      "udp-bind",
+      "udp-send-to",
+      "udp-multicast-membership",
+      "tcp-listen",
+      "tcp-connect"
+    ]}
+  ],
 
   "app": {
     "background": {
