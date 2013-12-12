@@ -1,8 +1,8 @@
-///<reference path="./util.ts"/>
 ///<reference path="./my_restify.ts"/>
 ///<reference path="./websocketserver.ts"/>
 
 declare var chrome;
+declare var util;
 
 class PeerJsOptions{
     public key: string = "peerjs";
@@ -46,7 +46,7 @@ class PeerJsServer {
         if(PeerJsServer._instance === null) {
             PeerJsServer._instance = new PeerJsServer(option);
 
-            Util.debug = option.debug;
+            util.debug = option.debug;
             PeerJsServer._instance._app = new MyRestify();
             PeerJsServer._instance._clients = {};
             PeerJsServer._instance._outstanding = {};
@@ -110,10 +110,10 @@ class PeerJsServer {
                         payload: message.payload
                     });
                 } else {
-                    Util.prettyError('Message unrecognized');
+                    util.prettyError('Message unrecognized');
                 }
             } catch(e) {
-                Util.log('Invalid message', data);
+                util.log('Invalid message', data);
                 throw e;
             }
         });
@@ -349,7 +349,7 @@ class PeerJsServer {
         // User is connected!
         if (destination) {
             try {
-                Util.log(type, 'from', src, 'to', dst);
+                util.log(type, 'from', src, 'to', dst);
                 if (destination.socket) {
                     destination.socket.send(data);
                 } else if (destination.res) {
@@ -362,7 +362,7 @@ class PeerJsServer {
             } catch (e) {
                 // This happens when a peer disconnects without closing connections and
                 // the associated WebSocket has not closed.
-                Util.prettyError(e);
+                util.prettyError(e);
                 // Tell other side to stop trying.
                 this._removePeer(key, dst);
                 this._handleTransmission(key, {
@@ -390,12 +390,12 @@ class PeerJsServer {
     }
 
     private _generateClientId(key: string): any{
-        var clientId = Util.randomId();
+        var clientId = util.randomId();
         if (!this._clients[key]) {
             return clientId;
         }
         while (!!this._clients[key][clientId]) {
-            clientId = Util.randomId();
+            clientId = util.randomId();
         }
         return clientId;
     }

@@ -1,6 +1,6 @@
 ///<reference path="./http/http.ts"/>
 ///<reference path="./jquery.d.ts"/>
-///<reference path="./util.ts"/>
+///<reference path="./parse_uri.ts"/>
 var MyRestify = (function () {
     function MyRestify() {
         this._getTargetsArray = [];

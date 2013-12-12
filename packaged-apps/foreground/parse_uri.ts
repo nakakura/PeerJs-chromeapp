@@ -1,27 +1,6 @@
 ///<reference path="./http/http.ts"/>
 ///<reference path="./jquery.d.ts"/>
 
-//static class
-class Util{
-    static debug: boolean = false;
-
-    static randomId(): string{
-        return Math.random().toString(36).substr(2);
-    }
-
-    static prettyError(msg: string): void{
-        if(Util.debug){
-            console.log('ERROR PeerServer: ', msg);
-        }
-    }
-
-    static log(...message: string[]): void{
-        if(Util.debug){
-            console.log.apply(console, message);
-        }
-    }
-}
-
 class ParseUri{
     static chompNull(array: string[]): string[]{
         function sub(counter: number, subArray: string[]): string[]{

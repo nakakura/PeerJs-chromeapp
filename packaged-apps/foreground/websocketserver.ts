@@ -1,5 +1,5 @@
 ///<reference path="./http/http.ts"/>
-///<reference path="./util.ts"/>
+///<reference path="./parse_uri.ts"/>
 ///<reference path="./my_restify.ts"/>
 
 class WebSocketServer{
