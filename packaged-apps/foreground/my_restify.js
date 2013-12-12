@@ -7,6 +7,7 @@ var MyRestify = (function () {
         this._postTargetsArray = [];
         this._getCallbackHash = {};
         this._postCallbackHash = {};
+        this._chain = [];
         if (Http.HttpServer && Http.WebSocketServer) {
             // Listen for HTTP connections.
             this._webServer = new Http.HttpServer();
@@ -22,6 +23,10 @@ else if (req.headers['method'] = 'POST')
                 self._notifyPost(req.headers['url'], req);
             return true;
         });
+    };
+
+    MyRestify.prototype.use = function (method) {
+        this._chain.push(method);
     };
 
     MyRestify.prototype.listen = function (port) {
@@ -114,6 +119,35 @@ else if (req.headers['method'] = 'POST')
 
     MyRestify.prototype.webServer = function () {
         return this._webServer;
+    };
+
+    MyRestify.prototype.bodyParser = function (options) {
+        options = options || {};
+        options.bodyReader = true;
+
+        return function parseBody(req, res, next) {
+            if (req.method == 'HEAD') {
+                next();
+                return;
+            }
+            if (req.method == 'GET') {
+                if (options.requestBodyOnGet == null || options.requestBodyOnGet == false) {
+                    next();
+                    return;
+                }
+            }
+
+            next();
+        };
+    };
+
+    MyRestify.prototype.queryParser = function () {
+        return function parseQueryString(req, res, next) {
+            var item = ParseUri.matchParseItem(res.headers['url'], this._getTargetsArray);
+            req.params = ParseUri.parseParams(res.headers['url'], item);
+            req.params.remoteAddress = req.remoteAddress;
+            next();
+        };
     };
     return MyRestify;
 })();

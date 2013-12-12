@@ -8,6 +8,7 @@ class MyRestify{
     private _postTargetsArray: ParseTargetItem[] = [];
     private _getCallbackHash: {[key: string]: (req: any, res: any, next: ()=>void)=>void} = {};
     private _postCallbackHash: {[key: string]: (req: any, res: any, next: ()=>void)=>void} = {};
+    private _chain: Array<(req: any, res: Http.HttpRequest, next: ()=>void)=>void> = [];
 
     constructor(){
         if (Http.HttpServer && Http.WebSocketServer) {
@@ -24,6 +25,10 @@ class MyRestify{
             else if(req.headers['method'] = 'POST') self._notifyPost(req.headers['url'], req);
             return true;
         });
+    }
+
+    public use(method: (req: any, res: Http.HttpRequest, next: ()=>void)=>void){
+        this._chain.push(method);
     }
 
     public listen(port: number){
@@ -116,6 +121,35 @@ class MyRestify{
 
     public webServer(): Http.HttpServer{
         return this._webServer;
+    }
+
+    public bodyParser(options: any): (req: any, res: Http.HttpRequest, next: ()=>void)=>void{
+        options = options || {};
+        options.bodyReader = true;
+
+        return function parseBody(req: any, res: Http.HttpRequest, next: ()=>void): void{
+            if (req.method == 'HEAD') {
+                next();
+                return;
+            }
+            if (req.method == 'GET') {
+                if (options.requestBodyOnGet == null || options.requestBodyOnGet == false) {
+                    next();
+                    return;
+                }
+            }
+
+            next();
+        }
+    }
+
+    public queryParser(): (req: any, res: Http.HttpRequest, next: ()=>void)=>void{
+        return function parseQueryString(req: any, res: Http.HttpRequest, next: ()=>void): void{
+            var item = ParseUri.matchParseItem(res.headers['url'], this._getTargetsArray);
+            req.params = ParseUri.parseParams(res.headers['url'], item);
+            req.params.remoteAddress = req.remoteAddress;
+            next();
+        }
     }
 }
 
