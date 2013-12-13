@@ -6,11 +6,9 @@ $(function () {
         var peer = new PeerServer({
             port: port,
             timeout: 5000,
-            key: key});// .getInstance(new PeerJsOptions(key, port));
+            key: key});
         $("#start").hide();
     });
 
 });
 
-
-//# sourceMappingURL=foreground.js.map

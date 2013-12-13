@@ -103,8 +103,6 @@ var Http;
                 if (opt_host.length > 0)
                     address = opt_host[0];
                 chrome.runtime.getBackgroundPage(function (bgPage) {
-                    console.log("bgpage");
-                    console.log(bgPage.oldSocketId);
                     if (bgPage.oldSocketId !== undefined)
                         chrome.socket.destroy(bgPage.oldSocketId);
 

@@ -1305,4 +1305,3 @@ models.network.Http.statusCode = new haxe.ds.StringMap();
 Main.main();
 })();
 
-//@ sourceMappingURL=main.js.map
