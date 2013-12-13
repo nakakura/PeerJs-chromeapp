@@ -6,14 +6,10 @@ var __extends = this.__extends || function (d, b) {
 };
 var Http;
 (function (Http) {
-    var _socket = chrome.socket;
     var _responseMap;
     initialize();
 
     function initialize() {
-        if (!_socket)
-            return;
-
         // Http response code strings.
         _responseMap = {
             200: 'OK',
@@ -97,7 +93,7 @@ var Http;
                 opt_host[_i] = arguments[_i + 1];
             }
             var t = this;
-            _socket.create('tcp', {}, function (socketInfo) {
+            chrome.socket.create('tcp', {}, function (socketInfo) {
                 t._socketInfo = socketInfo;
                 var address = '0.0.0.0';
                 if (opt_host.length > 0)
@@ -105,8 +101,7 @@ var Http;
                 chrome.runtime.getBackgroundPage(function (bgPage) {
                     if (bgPage.oldSocketId !== undefined)
                         chrome.socket.destroy(bgPage.oldSocketId);
-
-                    _socket.listen(t._socketInfo['socketId'], address, port, 50, function (result) {
+                    chrome.socket.listen(t._socketInfo['socketId'], address, port, 50, function (result) {
                         t._readyState = 1;
                         t._acceptConnection(t._socketInfo['socketId']);
                         bgPage.oldSocketId = t._socketInfo['socketId'];
@@ -117,7 +112,7 @@ var Http;
 
         HttpServer.prototype._acceptConnection = function (socketId) {
             var t = this;
-            _socket.accept(t._socketInfo['socketId'], function (acceptInfo) {
+            chrome.socket.accept(t._socketInfo['socketId'], function (acceptInfo) {
                 t._onConnection(acceptInfo);
                 t._acceptConnection(socketId);
             });
@@ -133,8 +128,8 @@ var Http;
             var endIndex = 0;
             function onDataRead(readInfo) {
                 if (readInfo.resultCode <= 0) {
-                    _socket.disconnect(socketId);
-                    _socket.destroy(socketId);
+                    chrome.socket.disconnect(socketId);
+                    chrome.socket.destroy(socketId);
                     return;
                 }
                 requestData += arrayBufferToString(readInfo.data).replace(/\r\n/g, '\n');
@@ -143,7 +138,7 @@ var Http;
                 endIndex = requestData.indexOf('\n\n', endIndex);
                 if (endIndex == -1) {
                     endIndex = requestData.length - 1;
-                    _socket.read(socketId, onDataRead);
+                    chrome.socket.read(socketId, onDataRead);
                     return;
                 }
 
@@ -166,7 +161,7 @@ var Http;
                     self._onRequest(request);
                 });
             }
-            _socket.read(socketId, onDataRead);
+            chrome.socket.read(socketId, onDataRead);
         };
 
         HttpServer.prototype._onRequest = function (request) {
@@ -215,8 +210,8 @@ else if (keepAlive)
         }
         HttpRequest.prototype.close = function () {
             if (this.headers['Connection'] != 'keep-alive') {
-                _socket.disconnect(this._socketId);
-                _socket.destroy(this._socketId);
+                chrome.socket.disconnect(this._socketId);
+                chrome.socket.destroy(this._socketId);
             }
             this._socketId = 0;
             this.readyState = 3;
@@ -308,7 +303,7 @@ else if (keepAlive)
         HttpRequest.prototype._write = function (array) {
             var t = this;
             this.bytesRemaining += array.byteLength;
-            _socket.write(this._socketId, array, function (writeInfo) {
+            chrome.socket.write(this._socketId, array, function (writeInfo) {
                 if (writeInfo.bytesWritten < 0) {
                     return;
                 }
@@ -450,7 +445,7 @@ else if (keepAlive)
                     return;
                 }
                 if (!readInfo.data.byteLength) {
-                    _socket.read(t._socketId, onDataRead);
+                    chrome.socket.read(t._socketId, onDataRead);
                     return;
                 }
 
@@ -512,9 +507,9 @@ else if (keepAlive)
                         break;
                     }
                 }
-                _socket.read(t._socketId, onDataRead);
+                chrome.socket.read(t._socketId, onDataRead);
             };
-            _socket.read(this._socketId, onDataRead);
+            chrome.socket.read(this._socketId, onDataRead);
         };
 
         WebSocketServerSocket.prototype._onFrame = function (op, data) {
@@ -563,7 +558,7 @@ else if (str.length > 125)
             };
 
             var array = WebsocketFrameString(op, data || '');
-            _socket.write(this._socketId, array, function (writeInfo) {
+            chrome.socket.write(this._socketId, array, function (writeInfo) {
                 if (writeInfo['resultCode'] < 0 || writeInfo['bytesWritten'] !== array.byteLength) {
                     t._close();
                 }
