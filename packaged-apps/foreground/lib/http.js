@@ -102,10 +102,17 @@ var Http;
                 var address = '0.0.0.0';
                 if (opt_host.length > 0)
                     address = opt_host[0];
+                chrome.runtime.getBackgroundPage(function (bgPage) {
+                    console.log("bgpage");
+                    console.log(bgPage.oldSocketId);
+                    if (bgPage.oldSocketId !== undefined)
+                        chrome.socket.destroy(bgPage.oldSocketId);
 
-                _socket.listen(t._socketInfo['socketId'], address, port, 50, function (result) {
-                    t._readyState = 1;
-                    t._acceptConnection(t._socketInfo['socketId']);
+                    _socket.listen(t._socketInfo['socketId'], address, port, 50, function (result) {
+                        t._readyState = 1;
+                        t._acceptConnection(t._socketInfo['socketId']);
+                        bgPage.oldSocketId = t._socketInfo['socketId'];
+                    });
                 });
             });
         };
