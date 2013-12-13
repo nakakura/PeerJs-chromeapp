@@ -7,7 +7,8 @@
 
 function PeerServer(options) {
     if (!(this instanceof PeerServer)) return new PeerServer(options);
-//    EventEmitter.call(this);
+    //PeerJS Original Code
+    //    EventEmitter.call(this);
 
     this._options = util.extend({
         port: 80,
@@ -57,19 +58,19 @@ PeerServer.prototype._initializeWSS = function() {
     var self = this;
 
     // Create WebSocket server as well.
-    this._wss = new WebSocketServer({ path: '/peerjs', server: this._app});
+    //PeerJS Original Code
+    //this._wss = new WebSocketServer({ path: '/peerjs', server: this._app});
+    this._wss = new Http.WebSocketServer({ path: '/peerjs', server: this._app.webServer()});
 
     this._wss.on('connection', function(socket) {
-        console.log("onconnect");
-        console.log(socket);
-        console.log(socket.upgradeReq.url);
-//        var query = url.parse(socket.upgradeReq.url, true).query;
+        //PeerJS Original Code
+        //var query = url.parse(socket.upgradeReq.url, true).query;
         var query = ParseUri.parseUrl(socket.upgradeReq.url);
         var id = query.id;
         var token = query.token;
         var key = query.key;
         var ip = socket.upgradeReq.socket.remoteAddress;
-        socket.peerjsID = id; //追加部分
+        socket.peerjsID = id; //NTTCom Add
 
         if (!id || !token || !key) {
             socket.send(JSON.stringify({ type: 'ERROR', payload: { msg: 'No id, token, or key supplied to websocket server' } }));
@@ -127,24 +128,18 @@ PeerServer.prototype._configureWS = function(socket, key, id, token) {
     // Handle messages from peers.
     socket.on('message', function(e) {
         var data = e.data; //追加部分
-        console.log("on message");
-        console.log(data);
         try {
             var message = JSON.parse(data);
 
             if (['LEAVE', 'CANDIDATE', 'OFFER', 'ANSWER'].indexOf(message.type) !== -1) {
-                console.log("onmessage2");
                 self._handleTransmission(key, {
                     type: message.type,
                     src: id,
                     dst: message.dst,
                     payload: message.payload
                 });
-                console.log("onmessage2.1");
             } else {
-                console.log("onmessage3");
                 util.prettyError('Message unrecognized');
-                console.log("onmessage3.1");
             }
         } catch(e) {
             util.log('Invalid message', data);
@@ -183,10 +178,10 @@ PeerServer.prototype._checkKey = function(key, ip, cb) {
 /** Initialize HTTP server routes. */
 PeerServer.prototype._initializeHTTP = function() {
     var self = this;
-
-//    this._app.use(restify.bodyParser({ mapParams: false }));
+    //PeerJS Original Code
+    //this._app.use(restify.bodyParser({ mapParams: false }));
+    //this._app.use(restify.queryParser());
     this._app.use(this._app.bodyParser({ mapParams: false }));
-//    this._app.use(restify.queryParser());
     this._app.use(this._app.queryParser());
     this._app.use(util.allowCrossDomain);
 
@@ -198,14 +193,14 @@ PeerServer.prototype._initializeHTTP = function() {
     });
 
     // Server sets up HTTP streaming when you get post an ID.
-//    this._app.post('/:key/:id/:token/id', function(req, res, next) {
-//postだとサンプルが動かない
+
+    //PeerJS Original Code
+    //this._app.post('/:key/:id/:token/id', function(req, res, next) {
     this._app.get('/:key/:id/:token/id', function(req, res, next) {
         var id = req.params.id;
         var token = req.params.token;
         var key = req.params.key;
         var ip = req.connection.remoteAddress;
-        console.log(res);
 
         if (!self._clients[key] || !self._clients[key][id]) {
             self._checkKey(key, ip, function(err) {
@@ -428,4 +423,5 @@ PeerServer.prototype._generateClientId = function(key) {
     return clientId;
 };
 
+//PeerJS Original Code
 //exports.PeerServer = PeerServer;

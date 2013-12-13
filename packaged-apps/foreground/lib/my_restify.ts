@@ -1,73 +1,72 @@
-///<reference path="./http/http.ts"/>
+///<reference path="./http.ts"/>
 ///<reference path="./jquery.d.ts"/>
 ///<reference path="./parse_uri.ts"/>
-var MyRestify = (function () {
-    function MyRestify() {
-        this._getTargetsArray = [];
-        this._postTargetsArray = [];
-        this._getCallbackHash = {};
-        this._postCallbackHash = {};
-        this._chain = [];
+
+class MyRestify{
+    private _webServer: Http.HttpServer;
+    private _getTargetsArray: ParseTargetItem[] = [];
+    private _postTargetsArray: ParseTargetItem[] = [];
+    private _getCallbackHash: {[key: string]: (req: any, res: any, next: ()=>void)=>void} = {};
+    private _postCallbackHash: {[key: string]: (req: any, res: any, next: ()=>void)=>void} = {};
+    private _chain: Array<(req: any, res: Http.HttpRequest, next: ()=>void)=>void> = [];
+
+    constructor(){
         if (Http.HttpServer && Http.WebSocketServer) {
             // Listen for HTTP connections.
             this._webServer = new Http.HttpServer();
         }
     }
-    MyRestify.prototype.use = function (method) {
+    public use(method: (req: any, res: Http.HttpRequest, next: ()=>void)=>void){
         this._chain.push(method);
-    };
+    }
 
-    MyRestify.prototype.listen = function (port) {
+    public listen(port: number){
         this._webServer.listen(port);
         this._startListening();
-    };
+    }
 
-    MyRestify.prototype._startListening = function () {
+    private _startListening(){
         var self = this;
 
-        this._webServer.on('request', function (req) {
-            if (req.headers['method'] = 'GET')
-                self._notifyGet(req.headers['url'], req);
-else if (req.headers['method'] = 'POST')
-                self._notifyPost(req.headers['url'], req);
+        this._webServer.on('request', function(req: Http.HttpRequest) {
+            if(req.headers['method'] = 'GET') self._notifyGet(req.headers['url'], req);
+            else if(req.headers['method'] = 'POST') self._notifyPost(req.headers['url'], req);
             return true;
         });
-    };
+    }
 
-    MyRestify.prototype.get = function (path, callback) {
+    public get(path: string, callback: (req: Http.HttpRequest, res: any, next: ()=>void)=>void){
         this._getTargetsArray.push(ParseUri.targetParams(path));
         this._getCallbackHash[path] = callback;
-    };
+    }
 
-    MyRestify.prototype.post = function (path, callback) {
+    public post(path: string, callback: (req: Http.HttpRequest, res: any, next: ()=>void)=>void){
         this._postTargetsArray.push(ParseUri.targetParams(path));
         this._postCallbackHash[path] = callback;
-    };
+    }
 
-    MyRestify.prototype._notifyGet = function (path, req) {
-        console.log("get " + path);
+    private _notifyGet(path: string, req: Http.HttpRequest){
         var self = this;
         var item = ParseUri.matchParseItem(path, this._getTargetsArray);
-        if (item !== null && item.srcPath in this._getCallbackHash) {
-            function _applyChain(counter, req, res, callback) {
-                console.log("applychain " + counter);
-                if (counter >= self._chain.length) {
-                    callback(req, res, function () {
-                    });
+        if(item !== null && item.srcPath in this._getCallbackHash){
+            function _applyChain(counter: number, req: any, res: Http.HttpRequest,
+                callback: (req:any, res: Http.HttpRequest, next: ()=>void)=>void): void{
+                if(counter >= self._chain.length){
+                    callback(req, res, function(){});
                     return;
                 }
 
-                self._chain[counter](req, res, function () {
+                self._chain[counter](req, res, function(){
                     _applyChain(counter + 1, req, res, callback);
                 });
             }
 
             var options = {};
             options['method'] = req.headers['method'];
-            _applyChain(0, options, req, function (req, res, next) {
+            _applyChain(0, options, req, function(req: any, res: Http.HttpRequest, next: ()=>void){
                 self._getCallbackHash[item.srcPath](req, res, next);
             });
-        } else {
+        }else{
             var errorMessage = "404 Not Found";
             req.writeHead(200, {
                 'Content-Type': "text/plain",
@@ -78,30 +77,29 @@ else if (req.headers['method'] = 'POST')
             });
             req.write(errorMessage);
         }
-    };
+  }
 
-    MyRestify.prototype._notifyPost = function (path, req) {
-        console.log("post " + path);
+    private _notifyPost(path: string, req: Http.HttpRequest){
         var self = this;
         var item = ParseUri.matchParseItem(path, this._postTargetsArray);
-        if (item !== null && item.srcPath in this._postCallbackHash) {
-            function _applyChain(counter, req, res, callback) {
-                if (counter >= this._chain.length) {
-                    callback(req, res, function () {
-                    });
+        if(item !== null && item.srcPath in this._postCallbackHash){
+            function _applyChain(counter: number, req: any, res: Http.HttpRequest,
+                                 callback: (req:any, res: Http.HttpRequest, next: ()=>void)=>void): void{
+                if(counter >= this._chain.length){
+                    callback(req, res, function(){});
                     return;
                 }
 
-                this._chain[counter](req, res, function () {
+                this._chain[counter](req, res, function(){
                     _applyChain(counter + 1, req, res, callback);
                 });
             }
             var options = {};
             options['method'] = req.headers['method'];
-            _applyChain(0, options, req, function (req, res, next) {
+            _applyChain(0, options, req, function(req: any, res: Http.HttpRequest, next: ()=>void){
                 self._postCallbackHash[item.srcPath](req, res, next);
             });
-        } else {
+        }else{
             var errorMessage = "404 Not Found";
             req.writeHead(200, {
                 'Content-Type': "text/plain",
@@ -112,17 +110,17 @@ else if (req.headers['method'] = 'POST')
             });
             req.write(errorMessage);
         }
-    };
+    }
 
-    MyRestify.prototype.webServer = function () {
+    public webServer(): Http.HttpServer{
         return this._webServer;
-    };
+    }
 
-    MyRestify.prototype.bodyParser = function (options) {
+    public bodyParser(options: any): (req: any, res: Http.HttpRequest, next: ()=>void)=>void{
         options = options || {};
         options.bodyReader = true;
 
-        return function parseBody(req, res, next) {
+        return function parseBody(req: any, res: Http.HttpRequest, next: ()=>void): void{
             if (req.method == 'HEAD') {
                 next();
                 return;
@@ -135,19 +133,18 @@ else if (req.headers['method'] = 'POST')
             }
 
             next();
-        };
-    };
+        }
+    }
 
-    MyRestify.prototype.queryParser = function () {
+    public queryParser(): (req: any, res: Http.HttpRequest, next: ()=>void)=>void{
         var self = this;
-        return function parseQueryString(req, res, next) {
+        return function parseQueryString(req: any, res: Http.HttpRequest, next: ()=>void): void{
             var item = ParseUri.matchParseItem(res.headers['url'], self._getTargetsArray);
             req.params = ParseUri.parseParams(res.headers['url'], item);
-            var connection = { remoteAddress: res.remoteAddress };
+            var connection = {remoteAddress: res.remoteAddress};
             req['connection'] = connection;
             next();
-        };
-    };
-    return MyRestify;
-})();
-//# sourceMappingURL=my_restify.js.map
+        }
+    }
+}
+

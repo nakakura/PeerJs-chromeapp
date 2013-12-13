@@ -4,9 +4,9 @@ $(function () {
         var key = $("#key")[0].value;
         var port = parseInt($("#port")[0].value, 10);
         var peer = new PeerServer({
-            port: 9000,
+            port: port,
             timeout: 5000,
-            key: 'peerjs'});// .getInstance(new PeerJsOptions(key, port));
+            key: key});// .getInstance(new PeerJsOptions(key, port));
         $("#start").hide();
     });
 

@@ -240,7 +240,6 @@ module Http{
                 headerString += '\r\n' + i + ': ' + responseHeaders[i];
             }
             headerString += '\r\n\r\n';
-            console.log(headerString);
             this._write(stringToArrayBuffer(headerString));
         }
 
@@ -332,7 +331,8 @@ module Http{
     }
 
     export class WebSocketServer extends EventSource{
-        constructor(httpServer: HttpServer){
+        constructor(params: any){
+            var httpServer: HttpServer = params.server;
             super();
             httpServer.on('upgrade', this._upgradeToWebSocket.bind(this));
         }
@@ -343,8 +343,8 @@ module Http{
                 return false;
             }
 
-
-            if (this.dispatchEvent('request', new WebSocketRequest(request))) {
+            var socket = new WebSocketRequest(request).accept();
+            if (this.dispatchEvent('connection', socket)){
                 if (request._socketId)
                     request.reject();
                 return true;

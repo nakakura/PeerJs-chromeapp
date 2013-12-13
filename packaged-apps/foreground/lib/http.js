@@ -236,7 +236,6 @@ else if (keepAlive)
                 headerString += '\r\n' + i + ': ' + responseHeaders[i];
             }
             headerString += '\r\n\r\n';
-            console.log(headerString);
             this._write(stringToArrayBuffer(headerString));
         };
 
@@ -331,7 +330,8 @@ else if (keepAlive)
 
     var WebSocketServer = (function (_super) {
         __extends(WebSocketServer, _super);
-        function WebSocketServer(httpServer) {
+        function WebSocketServer(params) {
+            var httpServer = params.server;
             _super.call(this);
             httpServer.on('upgrade', this._upgradeToWebSocket.bind(this));
         }
@@ -340,7 +340,8 @@ else if (keepAlive)
                 return false;
             }
 
-            if (this.dispatchEvent('request', new WebSocketRequest(request))) {
+            var socket = new WebSocketRequest(request).accept();
+            if (this.dispatchEvent('connection', socket)) {
                 if (request._socketId)
                     request.reject();
                 return true;

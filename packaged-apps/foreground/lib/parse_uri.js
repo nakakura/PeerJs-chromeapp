@@ -1,4 +1,4 @@
-///<reference path="./http/http.ts"/>
+///<reference path="./http.ts"/>
 ///<reference path="./jquery.d.ts"/>
 var ParseUri = (function () {
     function ParseUri() {
