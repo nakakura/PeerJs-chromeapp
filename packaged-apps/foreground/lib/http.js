@@ -170,7 +170,7 @@ var Http;
             if (!this.dispatchEvent(type, request))
                 request.close();
 else if (keepAlive)
-                this._readRequestFromSocket(request._socketId);
+                this._readRequestFromSocket(request.socketId);
         };
 
         HttpServer.prototype.socketId = function () {
@@ -202,7 +202,7 @@ else if (keepAlive)
             this.headers = headers;
             this._responseHeaders = {};
             this.headersSent = false;
-            this._socketId = socketId;
+            this.socketId = socketId;
             this._writes = 0;
             this.bytesRemaining = 0;
             this._finished = false;
@@ -210,10 +210,10 @@ else if (keepAlive)
         }
         HttpRequest.prototype.close = function () {
             if (this.headers['Connection'] != 'keep-alive') {
-                chrome.socket.disconnect(this._socketId);
-                chrome.socket.destroy(this._socketId);
+                chrome.socket.disconnect(this.socketId);
+                chrome.socket.destroy(this.socketId);
             }
-            this._socketId = 0;
+            this.socketId = 0;
             this.readyState = 3;
         };
 
@@ -303,7 +303,7 @@ else if (keepAlive)
         HttpRequest.prototype._write = function (array) {
             var t = this;
             this.bytesRemaining += array.byteLength;
-            chrome.socket.write(this._socketId, array, function (writeInfo) {
+            chrome.socket.write(this.socketId, array, function (writeInfo) {
                 if (writeInfo.bytesWritten < 0) {
                     return;
                 }
@@ -357,8 +357,8 @@ else if (keepAlive)
     var WebSocketRequest = (function (_super) {
         __extends(WebSocketRequest, _super);
         function WebSocketRequest(httpRequest) {
-            _super.call(this, httpRequest.headers, httpRequest._socketId);
-            httpRequest._socketId = 0;
+            _super.call(this, httpRequest.headers, httpRequest.socketId);
+            httpRequest.socketId = 0;
         }
         WebSocketRequest.prototype.accept = function () {
             // Construct WebSocket response key.
@@ -399,12 +399,12 @@ else if (keepAlive)
             if (this.headers['Sec-WebSocket-Protocol'])
                 responseHeader['Sec-WebSocket-Protocol'] = this.headers['Sec-WebSocket-Protocol'];
             this.writeHead(101, responseHeader);
-            var socket = new WebSocketServerSocket(this._socketId);
+            var socket = new WebSocketServerSocket(this.socketId);
             socket.upgradeReq['socket'] = this;
             socket.upgradeReq['url'] = this.headers['url'];
 
             // Detach the socket so that we don't use it anymore.
-            this._socketId = 0;
+            this.socketId = 0;
             return socket;
         };
 
