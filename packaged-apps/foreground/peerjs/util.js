@@ -47,3 +47,6 @@ var util = {
     }
 };
 
+// if node
+//module.exports = util;
+// end node
