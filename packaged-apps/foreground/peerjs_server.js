@@ -160,14 +160,13 @@ var PeerJsServer = (function () {
 
     PeerJsServer.prototype._initializeHTTP = function () {
         var self = this;
+        this._app.use(this._app.bodyParser({ mapParams: false }));
+        this._app.use(this._app.queryParser());
+        this._app.use(util.allowCrossDomain);
 
-        /*
-        this._app.use(restify.bodyParser({ mapParams: false }));
-        this._app.use(restify.queryParser());
-        this._app.use(Util.allowCrossDomain);
-        */
         // Retrieve guaranteed random ID.
         this._app.get('/:key/id', function (req, res, next) {
+            console.log("get key id");
             res.contentType = 'text/html';
             res.send(self._generateClientId(req['params']['key']));
             return next();
@@ -175,6 +174,7 @@ var PeerJsServer = (function () {
 
         // Server sets up HTTP streaming when you get post an ID.
         this._app.get('/:key/:id/:token/id', function (req, res, next) {
+            console.log("get key id token id ");
             var id = req['params']['id'];
             var token = req['params']['token'];
             var key = req['params']['key'];
@@ -197,6 +197,7 @@ var PeerJsServer = (function () {
         });
 
         var handle = function (req, res, next) {
+            console.log("post handle");
             var key = req.params.key;
             var id = req.params.id;
 

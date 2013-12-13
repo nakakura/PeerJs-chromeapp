@@ -217,6 +217,10 @@ else if (keepAlive)
             this.readyState = 3;
         };
 
+        HttpRequest.prototype.setHeader = function (key, value) {
+            this.headers[key] = value;
+        };
+
         HttpRequest.prototype.writeHead = function (responseCode, responseHeaders) {
             var headerString = this.version + ' ' + responseCode + ' ' + (_responseMap[responseCode] || 'Unknown');
             this._responseHeaders = responseHeaders;

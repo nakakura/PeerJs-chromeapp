@@ -220,6 +220,10 @@ module Http{
             this.readyState = 3;
         }
 
+        public setHeader(key: string, value: string): void{
+            this.headers[key] = value;
+        }
+
         public writeHead(responseCode: number, responseHeaders: any): void{
             var headerString: string = this.version + ' ' + responseCode + ' ' +
                 (_responseMap[responseCode] || 'Unknown');

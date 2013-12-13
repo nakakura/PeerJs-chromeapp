@@ -15,8 +15,10 @@ var MyRestify = (function () {
     }
     MyRestify.prototype._startListening = function () {
         var self = this;
+        console.log("startListening");
 
         this._webServer.addEventListener('request', function (req) {
+            console.log("onrequest");
             if (req.headers['method'] = 'GET')
                 self._notifyGet(req.headers['url'], req);
 else if (req.headers['method'] = 'POST')
@@ -45,75 +47,71 @@ else if (req.headers['method'] = 'POST')
     };
 
     MyRestify.prototype._notifyGet = function (path, req) {
+        console.log(req);
         var self = this;
-        function next_get(path, callback) {
-            return function () {
-                self.get(path, callback);
-                self._getTargetsArray.push(ParseUri.targetParams(path));
-            };
-        }
-
         var item = ParseUri.matchParseItem(path, this._getTargetsArray);
         if (item !== null && item.srcPath in this._getCallbackHash) {
-            var params = {};
-            params['params'] = ParseUri.parseParams(path, item);
-            params['params'].remoteAddress = req.remoteAddress;
-            var callback = this._getCallbackHash[item.srcPath];
-            for (var i = 0; i < this._getTargetsArray.length; i++) {
-                if (this._getTargetsArray[i] === item) {
-                    this._getTargetsArray.splice(i, 1);
-                    break;
+            console.log("hit");
+            function _applyChain(counter, req, res, callback) {
+                console.log("apply chain" + counter);
+                if (counter >= self._chain.length) {
+                    callback(req, res, function () {
+                    });
+                    return;
                 }
-            }
-            delete this._getCallbackHash[item.srcPath];
 
-            callback(params, req, next_get(item.srcPath, callback));
+                self._chain[counter](req, res, function () {
+                    _applyChain(counter + 1, req, res, callback);
+                });
+            }
+
+            var options = {};
+            options['method'] = req.headers['method'];
+            _applyChain(0, options, req, function (req, res, next) {
+                console.log(self._getCallbackHash);
+                console.log(item.srcPath);
+                self._getCallbackHash[item.srcPath](req, res, next);
+                console.log(req);
+            });
         } else {
-            var text = "hogehoge";
+            console.log("not hit");
+            var errorMessage = "404 Not Found";
             req.writeHead(200, {
                 'Content-Type': "text/plain",
-                'Content-Length': text.length,
+                'Content-Length': errorMessage.length,
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
                 'Access-Control-Allow-Headers': 'Content-Type'
             });
-            req.write("hogehoge");
+            req.write(errorMessage);
         }
     };
 
     MyRestify.prototype._notifyPost = function (path, req) {
         var self = this;
-        function next_post(path, callback) {
-            return function () {
-                self.get(path, callback);
-                self._postTargetsArray.push(ParseUri.targetParams(path));
-            };
-        }
-
         var item = ParseUri.matchParseItem(path, this._postTargetsArray);
         if (item !== null && item.srcPath in this._postCallbackHash) {
-            var params = {};
-            params['params'] = ParseUri.parseParams(path, item);
-            var callback = this._postCallbackHash[item.srcPath];
-            for (var i = 0; i < this._postTargetsArray.length; i++) {
-                if (this._postTargetsArray[i] === item) {
-                    this._postTargetsArray.splice(i, 1);
-                    break;
+            function _applyChain(counter, req, res, callback) {
+                if (counter >= this._chain.length) {
+                    callback(req, res, function () {
+                    });
+                    return;
                 }
-            }
-            delete this._postCallbackHash[item.srcPath];
 
-            callback(params, req, next_post(item.srcPath, callback));
+                this._chain[counter](req, res, function () {
+                    _applyChain(counter + 1, req, res, callback);
+                });
+            }
         } else {
-            var text = "hogehoge";
+            var errorMessage = "404 Not Found";
             req.writeHead(200, {
                 'Content-Type': "text/plain",
-                'Content-Length': text.length,
+                'Content-Length': errorMessage.length,
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
                 'Access-Control-Allow-Headers': 'Content-Type'
             });
-            req.write("hogehoge");
+            req.write(errorMessage);
         }
     };
 
@@ -126,6 +124,7 @@ else if (req.headers['method'] = 'POST')
         options.bodyReader = true;
 
         return function parseBody(req, res, next) {
+            console.log("parseBody");
             if (req.method == 'HEAD') {
                 next();
                 return;
@@ -142,8 +141,10 @@ else if (req.headers['method'] = 'POST')
     };
 
     MyRestify.prototype.queryParser = function () {
+        var self = this;
         return function parseQueryString(req, res, next) {
-            var item = ParseUri.matchParseItem(res.headers['url'], this._getTargetsArray);
+            console.log("parsequery");
+            var item = ParseUri.matchParseItem(res.headers['url'], self._getTargetsArray);
             req.params = ParseUri.parseParams(res.headers['url'], item);
             req.params.remoteAddress = req.remoteAddress;
             next();
