@@ -7,6 +7,29 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
+var restify;
+(function (restify) {
+    var myRestify = null;
+
+    function createServer(params) {
+        console.log("createserver");
+        if (myRestify == null)
+            myRestify = new MyRestify();
+        return myRestify;
+    }
+    restify.createServer = createServer;
+
+    function bodyParser(options) {
+        return myRestify.bodyParser(options);
+    }
+    restify.bodyParser = bodyParser;
+
+    function queryParser() {
+        return myRestify.queryParser();
+    }
+    restify.queryParser = queryParser;
+})(restify || (restify = {}));
+
 var MyRestify = (function () {
     function MyRestify() {
         this._getTargetsArray = [];

@@ -2,6 +2,24 @@
 ///<reference path="./jquery.d.ts"/>
 ///<reference path="./parse_uri.ts"/>
 
+module restify{
+    var myRestify: MyRestify = null;
+
+    export function createServer(params: any): MyRestify{
+        console.log("createserver");
+        if(myRestify == null) myRestify = new MyRestify();
+        return myRestify;
+    }
+
+    export function bodyParser(options: any): (req: any, res: Http.HttpRequest, next: ()=>void)=>void{
+        return myRestify.bodyParser(options);
+    }
+
+    export function queryParser(): (req: any, res: Http.HttpRequest, next: ()=>void)=>void{
+        return myRestify.queryParser();
+    }
+}
+
 class MyRestify{
     private _webServer: Http.HttpServer;
     private _getTargetsArray: ParseTargetItem[] = [];

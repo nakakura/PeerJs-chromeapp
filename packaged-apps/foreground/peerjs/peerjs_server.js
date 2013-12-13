@@ -1,3 +1,4 @@
+//PeerJS Original Code
 //var util = require('./util');
 //var restify = require('restify');
 //var http = require('http');
@@ -29,7 +30,7 @@ function PeerServer(options) {
     }
 
     this._options.ssl['name'] = 'PeerServer';
-    this._app = new MyRestify(); //restify.createServer(this._options.ssl);
+    this._app = restify.createServer(this._options.ssl);
 
     // Connected clients
     this._clients = {};
@@ -59,7 +60,6 @@ PeerServer.prototype._initializeWSS = function() {
     var self = this;
 
     // Create WebSocket server as well.
-    //PeerJS Original Code
     this._wss = new WebSocketServer({ path: '/peerjs', server: this._app});
 
     this._wss.on('connection', function(socket) {
@@ -176,11 +176,8 @@ PeerServer.prototype._checkKey = function(key, ip, cb) {
 /** Initialize HTTP server routes. */
 PeerServer.prototype._initializeHTTP = function() {
     var self = this;
-    //PeerJS Original Code
-    //this._app.use(restify.bodyParser({ mapParams: false }));
-    //this._app.use(restify.queryParser());
-    this._app.use(this._app.bodyParser({ mapParams: false }));
-    this._app.use(this._app.queryParser());
+    this._app.use(restify.bodyParser({ mapParams: false }));
+    this._app.use(restify.queryParser());
     this._app.use(util.allowCrossDomain);
 
     // Retrieve guaranteed random ID.
