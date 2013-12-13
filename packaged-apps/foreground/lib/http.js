@@ -288,9 +288,10 @@ else if (keepAlive)
                 if (xhr.status == 200)
                     contentLength = (this.response && this.response.byteLength) || 0;
 
-                var header = {};
-                header['Content-Type'] = type;
-                header['Content-Length'] = contentLength;
+                var header = {
+                    'Content-Type': type,
+                    'Content-Length': contentLength
+                };
                 t.writeHead(this.status, header);
                 t.end(this.response);
             };
@@ -390,10 +391,11 @@ else if (keepAlive)
             sha1.update(array, array.length);
             var responseKey = btoa(toString(sha1.digest()));
 
-            var responseHeader = {};
-            responseHeader['Upgrade'] = 'websocket';
-            responseHeader['Connection'] = 'Upgrade';
-            responseHeader['Sec-WebSocket-Accept'] = responseKey;
+            var responseHeader = {
+                "Upgrade": 'websocket',
+                "Connection": 'Upgrade',
+                "Sec-WebSocket-Accept": responseKey
+            };
             if (this.headers['Sec-WebSocket-Protocol'])
                 responseHeader['Sec-WebSocket-Protocol'] = this.headers['Sec-WebSocket-Protocol'];
             this.writeHead(101, responseHeader);
