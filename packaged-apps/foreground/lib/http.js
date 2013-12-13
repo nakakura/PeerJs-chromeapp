@@ -331,8 +331,7 @@ else if (keepAlive)
 
     var WebSocketServer = (function (_super) {
         __extends(WebSocketServer, _super);
-        function WebSocketServer(params) {
-            var httpServer = params.server;
+        function WebSocketServer(httpServer) {
             _super.call(this);
             httpServer.on('upgrade', this._upgradeToWebSocket.bind(this));
         }

@@ -50,6 +50,7 @@ function PeerServer(options) {
     this._setCleanupIntervals();
 }
 
+//PeerJS Original Code
 //util.inherits(PeerServer, EventEmitter);
 
 
@@ -59,13 +60,10 @@ PeerServer.prototype._initializeWSS = function() {
 
     // Create WebSocket server as well.
     //PeerJS Original Code
-    //this._wss = new WebSocketServer({ path: '/peerjs', server: this._app});
-    this._wss = new Http.WebSocketServer({ path: '/peerjs', server: this._app.webServer()});
+    this._wss = new WebSocketServer({ path: '/peerjs', server: this._app});
 
     this._wss.on('connection', function(socket) {
-        //PeerJS Original Code
-        //var query = url.parse(socket.upgradeReq.url, true).query;
-        var query = ParseUri.parseUrl(socket.upgradeReq.url);
+        var query = url.parse(socket.upgradeReq.url, true).query;
         var id = query.id;
         var token = query.token;
         var key = query.key;

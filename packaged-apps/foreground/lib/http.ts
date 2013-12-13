@@ -333,8 +333,7 @@ module Http{
     }
 
     export class WebSocketServer extends EventSource{
-        constructor(params: any){
-            var httpServer: HttpServer = params.server;
+        constructor(httpServer: HttpServer){
             super();
             httpServer.on('upgrade', this._upgradeToWebSocket.bind(this));
         }

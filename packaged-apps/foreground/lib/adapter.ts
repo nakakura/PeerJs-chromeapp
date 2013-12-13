@@ -148,3 +148,16 @@ class MyRestify{
     }
 }
 
+class WebSocketServer extends Http.WebSocketServer{
+    constructor(params: any){
+        var myRestify: MyRestify = params.server;
+        super(myRestify.webServer());
+    }
+}
+
+class url{
+    static parse(urlString: string, flag: boolean): any{
+        var params = ParseUri.parseUrl(urlString);
+        return {url: urlString, query: params};
+    }
+}

@@ -1,6 +1,12 @@
 ///<reference path="./http.ts"/>
 ///<reference path="./jquery.d.ts"/>
 ///<reference path="./parse_uri.ts"/>
+var __extends = this.__extends || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
 var MyRestify = (function () {
     function MyRestify() {
         this._getTargetsArray = [];
@@ -147,4 +153,23 @@ else if (req.headers['method'] = 'POST')
     };
     return MyRestify;
 })();
-//# sourceMappingURL=my_restify.js.map
+
+var WebSocketServer = (function (_super) {
+    __extends(WebSocketServer, _super);
+    function WebSocketServer(params) {
+        var myRestify = params.server;
+        _super.call(this, myRestify.webServer());
+    }
+    return WebSocketServer;
+})(Http.WebSocketServer);
+
+var url = (function () {
+    function url() {
+    }
+    url.parse = function (urlString, flag) {
+        var params = ParseUri.parseUrl(urlString);
+        return { url: urlString, query: params };
+    };
+    return url;
+})();
+//# sourceMappingURL=adapter.js.map
