@@ -19,7 +19,7 @@ var WebSocketServer = (function () {
     WebSocketServer.prototype.on = function (method, callback) {
         this._callback[method] = callback;
         if (method == "connection") {
-            this._webSockServer.addEventListener('request', this._onRequest.bind(this));
+            this._webSockServer.on('request', this._onRequest.bind(this));
         }
     };
 
@@ -32,8 +32,8 @@ var WebSocketServer = (function () {
             query['ip'] = socketInfo['peerAddress'];
             self._callback['connection'](socket, query);
 
-            socket.addEventListener('message', self._onMessage(self, socket));
-            socket.addEventListener('close', self._onClose(self, socket));
+            socket.on('message', self._onMessage(self, socket));
+            socket.on('close', self._onClose(self, socket));
         });
 
         return true;
@@ -42,7 +42,8 @@ var WebSocketServer = (function () {
     WebSocketServer.prototype._onMessage = function (self, socket) {
         var peerJsID = socket.peerjsID;
         return function (e) {
-            self._callback['message'](peerJsID, e.data);
+            console.log("beforeonmessage");
+            // self._callback['message'](peerJsID, e.data);
         };
     };
 

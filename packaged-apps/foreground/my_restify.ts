@@ -16,19 +16,6 @@ class MyRestify{
             this._webServer = new Http.HttpServer();
         }
     }
-
-    private _startListening(){
-        var self = this;
-        console.log("startListening");
-
-        this._webServer.addEventListener('request', function(req: Http.HttpRequest) {
-            console.log("onrequest");
-            if(req.headers['method'] = 'GET') self._notifyGet(req.headers['url'], req);
-            else if(req.headers['method'] = 'POST') self._notifyPost(req.headers['url'], req);
-            return true;
-        });
-    }
-
     public use(method: (req: any, res: Http.HttpRequest, next: ()=>void)=>void){
         this._chain.push(method);
     }
@@ -36,6 +23,16 @@ class MyRestify{
     public listen(port: number){
         this._webServer.listen(port);
         this._startListening();
+    }
+
+    private _startListening(){
+        var self = this;
+
+        this._webServer.on('request', function(req: Http.HttpRequest) {
+            if(req.headers['method'] = 'GET') self._notifyGet(req.headers['url'], req);
+            else if(req.headers['method'] = 'POST') self._notifyPost(req.headers['url'], req);
+            return true;
+        });
     }
 
     public get(path: string, callback: (req: Http.HttpRequest, res: any, next: ()=>void)=>void){
@@ -49,14 +46,13 @@ class MyRestify{
     }
 
     private _notifyGet(path: string, req: Http.HttpRequest){
-        console.log(req);
+        console.log("get " + path);
         var self = this;
         var item = ParseUri.matchParseItem(path, this._getTargetsArray);
         if(item !== null && item.srcPath in this._getCallbackHash){
-            console.log("hit");
             function _applyChain(counter: number, req: any, res: Http.HttpRequest,
                 callback: (req:any, res: Http.HttpRequest, next: ()=>void)=>void): void{
-                console.log("apply chain" + counter);
+                console.log("applychain " + counter);
                 if(counter >= self._chain.length){
                     callback(req, res, function(){});
                     return;
@@ -70,13 +66,9 @@ class MyRestify{
             var options = {};
             options['method'] = req.headers['method'];
             _applyChain(0, options, req, function(req: any, res: Http.HttpRequest, next: ()=>void){
-                console.log(self._getCallbackHash);
-                console.log(item.srcPath);
                 self._getCallbackHash[item.srcPath](req, res, next);
-                console.log(req);
             });
         }else{
-            console.log("not hit");
             var errorMessage = "404 Not Found";
             req.writeHead(200, {
                 'Content-Type': "text/plain",
@@ -90,6 +82,7 @@ class MyRestify{
   }
 
     private _notifyPost(path: string, req: Http.HttpRequest){
+        console.log("post " + path);
         var self = this;
         var item = ParseUri.matchParseItem(path, this._postTargetsArray);
         if(item !== null && item.srcPath in this._postCallbackHash){
@@ -104,6 +97,11 @@ class MyRestify{
                     _applyChain(counter + 1, req, res, callback);
                 });
             }
+            var options = {};
+            options['method'] = req.headers['method'];
+            _applyChain(0, options, req, function(req: any, res: Http.HttpRequest, next: ()=>void){
+                self._postCallbackHash[item.srcPath](req, res, next);
+            });
         }else{
             var errorMessage = "404 Not Found";
             req.writeHead(200, {
@@ -126,7 +124,6 @@ class MyRestify{
         options.bodyReader = true;
 
         return function parseBody(req: any, res: Http.HttpRequest, next: ()=>void): void{
-            console.log("parseBody");
             if (req.method == 'HEAD') {
                 next();
                 return;
@@ -145,10 +142,10 @@ class MyRestify{
     public queryParser(): (req: any, res: Http.HttpRequest, next: ()=>void)=>void{
         var self = this;
         return function parseQueryString(req: any, res: Http.HttpRequest, next: ()=>void): void{
-            console.log("parsequery");
             var item = ParseUri.matchParseItem(res.headers['url'], self._getTargetsArray);
             req.params = ParseUri.parseParams(res.headers['url'], item);
-            req.params.remoteAddress = req.remoteAddress;
+            var connection = {remoteAddress: res.remoteAddress};
+            req['connection'] = connection;
             next();
         }
     }

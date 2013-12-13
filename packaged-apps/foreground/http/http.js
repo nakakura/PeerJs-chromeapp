@@ -51,7 +51,7 @@ var Http;
         function EventSource() {
             this._listeners = {};
         }
-        EventSource.prototype.addEventListener = function (type, callback) {
+        EventSource.prototype.on = function (type, callback) {
             if (!this._listeners[type])
                 this._listeners[type] = [];
             this._listeners[type].push(callback);
@@ -218,10 +218,14 @@ else if (keepAlive)
         };
 
         HttpRequest.prototype.setHeader = function (key, value) {
-            this.headers[key] = value;
+            this._responseHeaders[key] = value;
         };
 
         HttpRequest.prototype.writeHead = function (responseCode, responseHeaders) {
+            for (var key in this._responseHeaders) {
+                responseHeaders[key] = this._responseHeaders[key];
+            }
+
             var headerString = this.version + ' ' + responseCode + ' ' + (_responseMap[responseCode] || 'Unknown');
             this._responseHeaders = responseHeaders;
             if (this.headers['Connection'] == 'keep-alive')
@@ -232,6 +236,7 @@ else if (keepAlive)
                 headerString += '\r\n' + i + ': ' + responseHeaders[i];
             }
             headerString += '\r\n\r\n';
+            console.log(headerString);
             this._write(stringToArrayBuffer(headerString));
         };
 
@@ -283,13 +288,11 @@ else if (keepAlive)
                 var contentLength = this.getResponseHeader('Content-Length');
                 if (xhr.status == 200)
                     contentLength = (this.response && this.response.byteLength) || 0;
-                t.writeHead(this.status, {
-                    'Content-Type': type,
-                    'Content-Length': contentLength,
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
-                    'Access-Control-Allow-Headers': 'Content-Type'
-                });
+
+                var header = {};
+                header['Content-Type'] = type;
+                header['Content-Length'] = contentLength;
+                t.writeHead(this.status, header);
                 t.end(this.response);
             };
             xhr.open('GET', url, true);
@@ -302,7 +305,6 @@ else if (keepAlive)
             this.bytesRemaining += array.byteLength;
             _socket.write(this._socketId, array, function (writeInfo) {
                 if (writeInfo.bytesWritten < 0) {
-                    console.error('Error writing to socket, code ' + writeInfo.bytesWritten);
                     return;
                 }
                 t.bytesRemaining -= writeInfo.bytesWritten;
@@ -317,13 +319,10 @@ else if (keepAlive)
         };
 
         HttpRequest.prototype.send = function (message) {
-            this.writeHead(200, {
-                'Content-Type': this.contentType,
-                'Content-Length': message.length,
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            });
+            var header = {};
+            header['Content-Type'] = this.contentType;
+            header['Content-Length'] = "" + message.length;
+            this.writeHead(200, header);
             this.write(message);
         };
         return HttpRequest;
@@ -334,7 +333,7 @@ else if (keepAlive)
         __extends(WebSocketServer, _super);
         function WebSocketServer(httpServer) {
             _super.call(this);
-            httpServer.addEventListener('upgrade', this._upgradeToWebSocket.bind(this));
+            httpServer.on('upgrade', this._upgradeToWebSocket.bind(this));
         }
         WebSocketServer.prototype._upgradeToWebSocket = function (request) {
             if (request.headers['Upgrade'] != 'websocket' || !request.headers['Sec-WebSocket-Key']) {
@@ -389,18 +388,17 @@ else if (keepAlive)
             var array = toArray(clientKey);
             sha1.update(array, array.length);
             var responseKey = btoa(toString(sha1.digest()));
-            var responseHeader = {
-                'Upgrade': 'websocket',
-                'Connection': 'Upgrade',
-                'Sec-WebSocket-Accept': responseKey
-            };
+
+            var responseHeader = {};
+            responseHeader['Upgrade'] = 'websocket';
+            responseHeader['Connection'] = 'Upgrade';
+            responseHeader['Sec-WebSocket-Accept'] = responseKey;
             if (this.headers['Sec-WebSocket-Protocol'])
                 responseHeader['Sec-WebSocket-Protocol'] = this.headers['Sec-WebSocket-Protocol'];
-            responseHeader['Access-Control-Allow-Origin'] = '*';
-            responseHeader['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE';
-            responseHeader['Access-Control-Allow-Headers'] = 'Content-Type';
             this.writeHead(101, responseHeader);
             var socket = new WebSocketServerSocket(this._socketId);
+            socket.upgradeReq['socket'] = this;
+            socket.upgradeReq['url'] = this.headers['url'];
 
             // Detach the socket so that we don't use it anymore.
             this._socketId = 0;
@@ -418,6 +416,7 @@ else if (keepAlive)
         function WebSocketServerSocket(socketId) {
             _super.call(this);
             this.peerjsID = "";
+            this.upgradeReq = {};
             this._socketId = socketId;
             this._readFromSocket();
         }

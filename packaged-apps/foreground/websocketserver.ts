@@ -25,7 +25,7 @@ class WebSocketServer{
     public on(method: string, callback: (...item: any[])=>void){
         this._callback[method] = callback;
         if(method == "connection") {
-            this._webSockServer.addEventListener('request', this._onRequest.bind(this));
+            this._webSockServer.on('request', this._onRequest.bind(this));
         }
     }
 
@@ -38,8 +38,8 @@ class WebSocketServer{
             query['ip'] = socketInfo['peerAddress'];
             self._callback['connection'](socket, query);
 
-            socket.addEventListener('message', self._onMessage(self, socket));
-            socket.addEventListener('close', self._onClose(self, socket));
+            socket.on('message', self._onMessage(self, socket));
+            socket.on('close', self._onClose(self, socket));
         });
 
         return true;
@@ -48,7 +48,8 @@ class WebSocketServer{
     private _onMessage(self: WebSocketServer, socket: Http.WebSocketServerSocket){
         var peerJsID = socket.peerjsID;
         return function(e){
-            self._callback['message'](peerJsID, e.data);
+            console.log("beforeonmessage");
+           // self._callback['message'](peerJsID, e.data);
         }
     }
 

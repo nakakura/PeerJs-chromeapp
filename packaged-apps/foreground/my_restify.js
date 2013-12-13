@@ -13,20 +13,6 @@ var MyRestify = (function () {
             this._webServer = new Http.HttpServer();
         }
     }
-    MyRestify.prototype._startListening = function () {
-        var self = this;
-        console.log("startListening");
-
-        this._webServer.addEventListener('request', function (req) {
-            console.log("onrequest");
-            if (req.headers['method'] = 'GET')
-                self._notifyGet(req.headers['url'], req);
-else if (req.headers['method'] = 'POST')
-                self._notifyPost(req.headers['url'], req);
-            return true;
-        });
-    };
-
     MyRestify.prototype.use = function (method) {
         this._chain.push(method);
     };
@@ -34,6 +20,18 @@ else if (req.headers['method'] = 'POST')
     MyRestify.prototype.listen = function (port) {
         this._webServer.listen(port);
         this._startListening();
+    };
+
+    MyRestify.prototype._startListening = function () {
+        var self = this;
+
+        this._webServer.on('request', function (req) {
+            if (req.headers['method'] = 'GET')
+                self._notifyGet(req.headers['url'], req);
+else if (req.headers['method'] = 'POST')
+                self._notifyPost(req.headers['url'], req);
+            return true;
+        });
     };
 
     MyRestify.prototype.get = function (path, callback) {
@@ -47,13 +45,12 @@ else if (req.headers['method'] = 'POST')
     };
 
     MyRestify.prototype._notifyGet = function (path, req) {
-        console.log(req);
+        console.log("get " + path);
         var self = this;
         var item = ParseUri.matchParseItem(path, this._getTargetsArray);
         if (item !== null && item.srcPath in this._getCallbackHash) {
-            console.log("hit");
             function _applyChain(counter, req, res, callback) {
-                console.log("apply chain" + counter);
+                console.log("applychain " + counter);
                 if (counter >= self._chain.length) {
                     callback(req, res, function () {
                     });
@@ -68,13 +65,9 @@ else if (req.headers['method'] = 'POST')
             var options = {};
             options['method'] = req.headers['method'];
             _applyChain(0, options, req, function (req, res, next) {
-                console.log(self._getCallbackHash);
-                console.log(item.srcPath);
                 self._getCallbackHash[item.srcPath](req, res, next);
-                console.log(req);
             });
         } else {
-            console.log("not hit");
             var errorMessage = "404 Not Found";
             req.writeHead(200, {
                 'Content-Type': "text/plain",
@@ -88,6 +81,7 @@ else if (req.headers['method'] = 'POST')
     };
 
     MyRestify.prototype._notifyPost = function (path, req) {
+        console.log("post " + path);
         var self = this;
         var item = ParseUri.matchParseItem(path, this._postTargetsArray);
         if (item !== null && item.srcPath in this._postCallbackHash) {
@@ -102,6 +96,11 @@ else if (req.headers['method'] = 'POST')
                     _applyChain(counter + 1, req, res, callback);
                 });
             }
+            var options = {};
+            options['method'] = req.headers['method'];
+            _applyChain(0, options, req, function (req, res, next) {
+                self._postCallbackHash[item.srcPath](req, res, next);
+            });
         } else {
             var errorMessage = "404 Not Found";
             req.writeHead(200, {
@@ -124,7 +123,6 @@ else if (req.headers['method'] = 'POST')
         options.bodyReader = true;
 
         return function parseBody(req, res, next) {
-            console.log("parseBody");
             if (req.method == 'HEAD') {
                 next();
                 return;
@@ -143,10 +141,10 @@ else if (req.headers['method'] = 'POST')
     MyRestify.prototype.queryParser = function () {
         var self = this;
         return function parseQueryString(req, res, next) {
-            console.log("parsequery");
             var item = ParseUri.matchParseItem(res.headers['url'], self._getTargetsArray);
             req.params = ParseUri.parseParams(res.headers['url'], item);
-            req.params.remoteAddress = req.remoteAddress;
+            var connection = { remoteAddress: res.remoteAddress };
+            req['connection'] = connection;
             next();
         };
     };

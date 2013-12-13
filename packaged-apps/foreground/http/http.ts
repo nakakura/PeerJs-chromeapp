@@ -51,7 +51,7 @@ module Http{
             this._listeners = {};
         }
 
-        public addEventListener(type: string, callback: (any)=>void ): void{
+        public on(type: string, callback: (any)=>void ): void{
             if (!this._listeners[type])
                 this._listeners[type] = [];
             this._listeners[type].push(callback);
@@ -221,10 +221,14 @@ module Http{
         }
 
         public setHeader(key: string, value: string): void{
-            this.headers[key] = value;
+            this._responseHeaders[key] = value;
         }
 
         public writeHead(responseCode: number, responseHeaders: any): void{
+            for(var key in this._responseHeaders) {
+                responseHeaders[key] = this._responseHeaders[key];
+            }
+
             var headerString: string = this.version + ' ' + responseCode + ' ' +
                 (_responseMap[responseCode] || 'Unknown');
             this._responseHeaders = responseHeaders;
@@ -236,6 +240,7 @@ module Http{
                 headerString += '\r\n' + i + ': ' + responseHeaders[i];
             }
             headerString += '\r\n\r\n';
+            console.log(headerString);
             this._write(stringToArrayBuffer(headerString));
         }
 
@@ -287,13 +292,11 @@ module Http{
                 var contentLength: number = this.getResponseHeader('Content-Length');
                 if (xhr.status == 200)
                     contentLength = (this.response && this.response.byteLength) || 0;
-                t.writeHead(this.status, {
-                    'Content-Type': type,
-                    'Content-Length': contentLength,
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
-                    'Access-Control-Allow-Headers': 'Content-Type'
-                });
+
+                var header = {};
+                header['Content-Type'] = type;
+                header['Content-Length'] = contentLength;
+                t.writeHead(this.status, header);
                 t.end(this.response);
             };
             xhr.open('GET', url, true);
@@ -306,7 +309,6 @@ module Http{
             this.bytesRemaining += array.byteLength;
             _socket.write(this._socketId, array, function(writeInfo) {
                 if (writeInfo.bytesWritten < 0) {
-                    console.error('Error writing to socket, code '+writeInfo.bytesWritten);
                     return;
                 }
                 t.bytesRemaining -= writeInfo.bytesWritten;
@@ -321,13 +323,10 @@ module Http{
         }
 
         public send(message: string): void{
-            this.writeHead(200, {
-                'Content-Type': this.contentType,
-                'Content-Length': message.length,
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            });
+            var header = {};
+            header['Content-Type'] = this.contentType;
+            header['Content-Length'] = "" + message.length;
+            this.writeHead(200, header);
             this.write(message);
         }
     }
@@ -335,7 +334,7 @@ module Http{
     export class WebSocketServer extends EventSource{
         constructor(httpServer: HttpServer){
             super();
-            httpServer.addEventListener('upgrade', this._upgradeToWebSocket.bind(this));
+            httpServer.on('upgrade', this._upgradeToWebSocket.bind(this));
         }
 
         private _upgradeToWebSocket(request): boolean{
@@ -391,17 +390,17 @@ module Http{
             var array: number[] = toArray(clientKey)
             sha1.update(array, array.length);
             var responseKey: string = btoa(toString(sha1.digest()));
-            var responseHeader = {
-                'Upgrade': 'websocket',
-                'Connection': 'Upgrade',
-                'Sec-WebSocket-Accept': responseKey};
+
+            var responseHeader = {};
+            responseHeader['Upgrade'] = 'websocket';
+            responseHeader['Connection'] = 'Upgrade';
+            responseHeader['Sec-WebSocket-Accept'] = responseKey;
             if (this.headers['Sec-WebSocket-Protocol'])
                 responseHeader['Sec-WebSocket-Protocol'] = this.headers['Sec-WebSocket-Protocol'];
-            responseHeader['Access-Control-Allow-Origin'] = '*';
-            responseHeader['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE';
-            responseHeader['Access-Control-Allow-Headers'] = 'Content-Type';
             this.writeHead(101, responseHeader);
             var socket: WebSocketServerSocket = new WebSocketServerSocket(this._socketId);
+            socket.upgradeReq['socket'] = this;
+            socket.upgradeReq['url'] = this.headers['url'];
             // Detach the socket so that we don't use it anymore.
             this._socketId = 0;
             return socket;
@@ -416,6 +415,7 @@ module Http{
         _socketId: number;
         readyState: number;
         public peerjsID: string = "";
+        public upgradeReq = {};
 
         constructor(socketId: number){
             super();
