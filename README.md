@@ -18,3 +18,6 @@ PackagedAppsの場合、SSLはオレオレ証明書で動かすしかなく、�
 
 ####peer.js
 　単なるランチャーなのでそもそも利用せず。ここで指定しているパラメータは、どっかで指定できるようにしたい。そのうちやる。
+
+####追加機能
+　UPnPで発見可能。ssdp:all, upnp:rootdevice, upnp:sakkuruDeviceに応答。
