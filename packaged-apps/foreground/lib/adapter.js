@@ -1,5 +1,5 @@
 ///<reference path="./http.ts"/>
-///<reference path="./jquery.d.ts"/>
+///<reference path="./../jquery.d.ts"/>
 ///<reference path="./parse_uri.ts"/>
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -12,7 +12,6 @@ var restify;
     var myRestify = null;
 
     function createServer(params) {
-        console.log("createserver");
         if (myRestify == null)
             myRestify = new MyRestify();
         return myRestify;

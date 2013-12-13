@@ -1,12 +1,11 @@
 ///<reference path="./http.ts"/>
-///<reference path="./jquery.d.ts"/>
+///<reference path="./../jquery.d.ts"/>
 ///<reference path="./parse_uri.ts"/>
 
 module restify{
     var myRestify: MyRestify = null;
 
     export function createServer(params: any): MyRestify{
-        console.log("createserver");
         if(myRestify == null) myRestify = new MyRestify();
         return myRestify;
     }

@@ -1,5 +1,4 @@
 $(function () {
-    console.log("hogehoge");
     $("#start").click(function(){
         var key = $("#key")[0].value;
         var port = parseInt($("#port")[0].value, 10);
