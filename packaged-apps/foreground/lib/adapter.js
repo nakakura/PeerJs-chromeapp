@@ -1,6 +1,6 @@
-///<reference path="./http.ts"/>
-///<reference path="./../jquery.d.ts"/>
-///<reference path="./parse_uri.ts"/>
+///<reference path="./websocket-server/http.d.ts"/>
+///<reference path="./jquery/jquery.d.ts"/>
+///<reference path="../application/URIMatcher.ts"/>
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -31,14 +31,13 @@ var restify;
 
 var MyRestify = (function () {
     function MyRestify() {
-        this._getTargetsArray = [];
-        this._postTargetsArray = [];
+        this._matcherArray = [];
         this._getCallbackHash = {};
         this._postCallbackHash = {};
         this._chain = [];
-        if (Http.HttpServer && Http.WebSocketServer) {
+        if (http.Server && http.WebSocketServer) {
             // Listen for HTTP connections.
-            this._webServer = new Http.HttpServer();
+            this._webServer = new http.Server();
         }
     }
     MyRestify.prototype.use = function (method) {
@@ -53,92 +52,118 @@ var MyRestify = (function () {
     MyRestify.prototype._startListening = function () {
         var self = this;
 
-        this._webServer.on('request', function (req) {
+        this._webServer.addEventListener('request', function (req) {
+            console.log(req.headers['url']);
             if (req.headers['method'] = 'GET')
                 self._notifyGet(req.headers['url'], req);
-else if (req.headers['method'] = 'POST')
+            else if (req.headers['method'] = 'POST')
                 self._notifyPost(req.headers['url'], req);
             return true;
         });
     };
 
     MyRestify.prototype.get = function (path, callback) {
-        this._getTargetsArray.push(ParseUri.targetParams(path));
+        console.log("set get " + path);
+        var uriParser = new App.URIMatcher(path);
+        this._matcherArray.push(uriParser);
         this._getCallbackHash[path] = callback;
     };
 
     MyRestify.prototype.post = function (path, callback) {
-        this._postTargetsArray.push(ParseUri.targetParams(path));
+        var uriParser = new App.URIMatcher(path);
+        this._matcherArray.push(uriParser);
         this._postCallbackHash[path] = callback;
     };
 
     MyRestify.prototype._notifyGet = function (path, req) {
-        var self = this;
-        var item = ParseUri.matchParseItem(path, this._getTargetsArray);
-        if (item !== null && item.srcPath in this._getCallbackHash) {
-            function _applyChain(counter, req, res, callback) {
-                if (counter >= self._chain.length) {
-                    callback(req, res, function () {
-                    });
-                    return;
-                }
-
-                self._chain[counter](req, res, function () {
-                    _applyChain(counter + 1, req, res, callback);
+        var _this = this;
+        console.log("notify get " + path);
+        var matchID = this._matchIndex(path);
+        if (matchID == -1) {
+            this._send404Message(req);
+            return;
+        }
+        var matcher = this._matcherArray[matchID];
+        var _applyChain = function (counter, req, res, callback) {
+            if (counter >= _this._chain.length) {
+                callback(req, res, function () {
+                    res.finished_ = true;
+                    console.log(res.headers);
+                    res.headers['Connection'] = "closing";
+                    //res.checkFinished_();
                 });
+                return;
             }
 
-            var options = {};
-            options['method'] = req.headers['method'];
-            _applyChain(0, options, req, function (req, res, next) {
-                self._getCallbackHash[item.srcPath](req, res, next);
+            _this._chain[counter](req, res, function () {
+                _applyChain(counter + 1, req, res, callback);
             });
-        } else {
-            var errorMessage = "404 Not Found";
-            req.writeHead(200, {
-                'Content-Type': "text/plain",
-                'Content-Length': errorMessage.length,
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            });
-            req.write(errorMessage);
-        }
+        };
+
+        var options = {};
+        options['method'] = req.headers['method'];
+        _applyChain(0, options, req, function (req, res, next) {
+            _this._getCallbackHash[matcher.sourceURL](req, res, next);
+        });
     };
 
     MyRestify.prototype._notifyPost = function (path, req) {
-        var self = this;
-        var item = ParseUri.matchParseItem(path, this._postTargetsArray);
-        if (item !== null && item.srcPath in this._postCallbackHash) {
-            function _applyChain(counter, req, res, callback) {
-                if (counter >= this._chain.length) {
-                    callback(req, res, function () {
-                    });
-                    return;
-                }
-
-                this._chain[counter](req, res, function () {
-                    _applyChain(counter + 1, req, res, callback);
-                });
-            }
-            var options = {};
-            options['method'] = req.headers['method'];
-            _applyChain(0, options, req, function (req, res, next) {
-                self._postCallbackHash[item.srcPath](req, res, next);
-            });
-        } else {
-            var errorMessage = "404 Not Found";
-            req.writeHead(200, {
-                'Content-Type': "text/plain",
-                'Content-Length': errorMessage.length,
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            });
-            req.write(errorMessage);
+        var _this = this;
+        var matchID = this._matchIndex(path);
+        if (matchID == -1) {
+            this._send404Message(req);
+            return;
         }
+        var matcher = this._matcherArray[matchID];
+        var _applyChain = function (counter, req, res, callback) {
+            if (counter >= _this._chain.length) {
+                callback(req, res, function () {
+                    res.finished_ = true;
+                    res.headers['Connection'] = "closing";
+                    //res.checkFinished_();
+                });
+                return;
+            }
+
+            _this._chain[counter](req, res, function () {
+                _applyChain(counter + 1, req, res, callback);
+            });
+        };
+
+        var options = {};
+        options['method'] = req.headers['method'];
+        _applyChain(0, options, req, function (req, res, next) {
+            _this._postCallbackHash[matcher.sourceURL](req, res, next);
+        });
     };
 
+    MyRestify.prototype._matchIndex = function (path) {
+        console.log("matchindex");
+        var retValue = -1;
+        for (var i = 0; i < this._matcherArray.length; i++) {
+            if (this._matcherArray[i].test(path)) {
+                retValue = i;
+                return retValue;
+            }
+        }
+
+        return retValue;
+    };
+
+    MyRestify.prototype._send404Message = function (req) {
+        var errorMessage = "404 Not Found";
+        req.writeHead(200, {
+            'Content-Type': "text/plain",
+            'Content-Length': errorMessage.length,
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        });
+        req.write(errorMessage);
+        req.finished_ = true;
+        req.headers['Connection'] = "closing";
+        req.checkFinished_();
+    };
     MyRestify.prototype.webServer = function () {
         return this._webServer;
     };
@@ -164,12 +189,17 @@ else if (req.headers['method'] = 'POST')
     };
 
     MyRestify.prototype.queryParser = function () {
-        var self = this;
-        return function parseQueryString(req, res, next) {
-            var item = ParseUri.matchParseItem(res.headers['url'], self._getTargetsArray);
-            req.params = ParseUri.parseParams(res.headers['url'], item);
-            var connection = { remoteAddress: res.remoteAddress };
-            req['connection'] = connection;
+        var _this = this;
+        return function (req, res, next) {
+            console.log(res.headers['url']);
+            var paths = res.headers['url'].split("?");
+            console.log(paths);
+            var matchID = _this._matchIndex(paths[0]);
+            var matcher = _this._matcherArray[matchID];
+            console.log(matchID);
+            req.params = {};
+            console.log("queryparser");
+            matcher.match(res.headers['url'], req.params);
             next();
         };
     };
@@ -182,15 +212,37 @@ var WebSocketServer = (function (_super) {
         var myRestify = params.server;
         _super.call(this, myRestify.webServer());
     }
+    WebSocketServer.prototype.on = function (method, callback) {
+        this.addEventListener(method, callback);
+    };
     return WebSocketServer;
-})(Http.WebSocketServer);
+})(http.WebSocketServer);
 
 var url = (function () {
     function url() {
     }
     url.parse = function (urlString, flag) {
-        var params = ParseUri.parseUrl(urlString);
+        console.log(urlString);
+        var params = url.parseUrl(urlString);
+        console.log(params);
         return { url: urlString, query: params };
+    };
+
+    url.parseUrl = function (url) {
+        function parseItem(counter, itemArray) {
+            if (itemArray.length == 0 || counter >= itemArray.length)
+                return {};
+
+            var params = itemArray[counter].split("=");
+            var hash = {};
+            if (params.length == 2)
+                hash[params[0]] = params[1];
+            return jQuery.extend(hash, parseItem(counter + 1, itemArray));
+        }
+
+        var params = url.split("?");
+        var paramArray = params[1].split("&");
+        return parseItem(0, paramArray);
     };
     return url;
 })();

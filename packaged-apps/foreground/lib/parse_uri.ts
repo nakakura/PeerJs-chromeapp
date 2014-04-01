@@ -1,5 +1,5 @@
+///<reference path="./jquery/jquery.d.ts"/>
 ///<reference path="./http.ts"/>
-///<reference path="./../jquery.d.ts"/>
 
 class ParseUri{
     static chompNull(array: string[]): string[]{

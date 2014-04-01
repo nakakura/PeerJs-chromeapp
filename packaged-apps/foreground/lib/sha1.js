@@ -86,6 +86,7 @@ var Sha1 = (function () {
 
         var n = 0;
 
+        // Optimize for 64 byte chunks at 64 byte boundaries.
         if (this._inbuf == 0) {
             while (n + 64 < opt_length) {
                 this._compress(bytes.slice(n, n + 64));
@@ -115,6 +116,7 @@ var Sha1 = (function () {
         var digest = [];
         var totalBits = this._total * 8;
 
+        // Add pad 0x80 0x00*.
         if (this._inbuf < 56) {
             this.update(this._pad, 56 - this._inbuf);
         } else {

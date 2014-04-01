@@ -63,6 +63,7 @@ PeerServer.prototype._initializeWSS = function() {
     this._wss = new WebSocketServer({ path: '/peerjs', server: this._app});
 
     this._wss.on('connection', function(socket) {
+        console.log("wss on");
         var query = url.parse(socket.upgradeReq.url, true).query;
         var id = query.id;
         var token = query.token;
@@ -71,6 +72,7 @@ PeerServer.prototype._initializeWSS = function() {
         socket.peerjsID = id; //NTTCom Add
 
         if (!id || !token || !key) {
+            console.log("initialize wss1");
             socket.send(JSON.stringify({ type: 'ERROR', payload: { msg: 'No id, token, or key supplied to websocket server' } }));
             socket.close();
             return;
@@ -80,6 +82,7 @@ PeerServer.prototype._initializeWSS = function() {
             self._checkKey(key, ip, function(err) {
                 if (!err) {
                     if (!self._clients[key][id]) {
+                        console.log("initialize wss2");
                         self._clients[key][id] = { token: token, ip: ip };
                         self._ips[ip]++;
                         socket.send(JSON.stringify({ type: 'OPEN' }));
@@ -108,6 +111,7 @@ PeerServer.prototype._configureWS = function(socket, key, id, token) {
         }
     } else {
         // ID-taken, invalid token
+        console.log("configure ws");
         socket.send(JSON.stringify({ type: 'ID-TAKEN', payload: { msg: 'ID is taken' } }));
         socket.close();
         return;
@@ -182,7 +186,9 @@ PeerServer.prototype._initializeHTTP = function() {
 
     // Retrieve guaranteed random ID.
     this._app.get('/:key/id', function(req, res, next) {
+        console.log(req.params);
         res.contentType = 'text/html';
+        console.log("get");
         res.send(self._generateClientId(req.params.key));
         return next();
     });
@@ -192,6 +198,8 @@ PeerServer.prototype._initializeHTTP = function() {
     //PeerJS Original Code
     //this._app.post('/:key/:id/:token/id', function(req, res, next) {
     this._app.get('/:key/:id/:token/id', function(req, res, next) {
+        console.log("get");
+        console.log(req.params);
         var id = req.params.id;
         var token = req.params.token;
         var key = req.params.key;
@@ -214,6 +222,8 @@ PeerServer.prototype._initializeHTTP = function() {
     });
 
     var handle = function(req, res, next) {
+        console.log("post");
+        console.log(req.params);
         var key = req.params.key;
         var id = req.params.id;
 
@@ -369,6 +379,7 @@ PeerServer.prototype._handleTransmission = function(key, message) {
         try {
             util.log(type, 'from', src, 'to', dst);
             if (destination.socket) {
+                console.log("destination send");
                 destination.socket.send(data);
             } else if (destination.res) {
                 data += '\n';

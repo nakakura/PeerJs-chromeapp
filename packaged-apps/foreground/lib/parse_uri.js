@@ -1,5 +1,5 @@
+///<reference path="./jquery/jquery.d.ts"/>
 ///<reference path="./http.ts"/>
-///<reference path="./../jquery.d.ts"/>
 var ParseUri = (function () {
     function ParseUri() {
     }
@@ -7,7 +7,7 @@ var ParseUri = (function () {
         function sub(counter, subArray) {
             if (counter >= subArray.length)
                 return subArray;
-else if (subArray[counter] === "") {
+            else if (subArray[counter] === "") {
                 subArray.splice(counter, 1);
                 return sub(counter, subArray);
             } else {
@@ -44,7 +44,7 @@ else if (subArray[counter] === "") {
         var array = ParseUri.parseDir(src);
         if (array.length != target.srcParams.length)
             return false;
-else if (array[array.length - 1].indexOf(target.method()) !== 0)
+        else if (array[array.length - 1].indexOf(target.method()) !== 0)
             return false;
         return true;
     };
@@ -62,7 +62,7 @@ else if (array[array.length - 1].indexOf(target.method()) !== 0)
         function subParseParams(counter, src, targets) {
             if (counter >= targets.length)
                 return null;
-else if (ParseUri.isMatchParams(src, targets[counter])) {
+            else if (ParseUri.isMatchParams(src, targets[counter])) {
                 return targets[counter];
             }
             return subParseParams(counter + 1, src, targets);
