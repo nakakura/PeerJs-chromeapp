@@ -203,7 +203,11 @@ PeerServer.prototype._initializeHTTP = function() {
         var id = req.params.id;
         var token = req.params.token;
         var key = req.params.key;
+        console.log("req");
+        console.log(req);
         var ip = req.connection.remoteAddress;
+        console.log(req.connection.remoteAddress);
+        console.log(ip);
 
         if (!self._clients[key] || !self._clients[key][id]) {
             self._checkKey(key, ip, function(err) {
@@ -288,7 +292,10 @@ PeerServer.prototype._startStreaming = function(res, key, id, token, open) {
 
     if (token === client.token) {
         // Client already exists
+        console.log("close--------here---------");
+        console.log(res);
         res.on('close', function() {
+            console.log("onclose======88***********");
             if (client.res === res) {
                 if (!client.socket) {
                     // No new request yet, peer dead

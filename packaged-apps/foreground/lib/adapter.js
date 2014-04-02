@@ -1,4 +1,4 @@
-///<reference path="./websocket-server/http.d.ts"/>
+///<reference path="./websocket-server/http.ts"/>
 ///<reference path="./jquery/jquery.d.ts"/>
 ///<reference path="../application/URIMatcher.ts"/>
 var __extends = this.__extends || function (d, b) {
@@ -35,9 +35,9 @@ var MyRestify = (function () {
         this._getCallbackHash = {};
         this._postCallbackHash = {};
         this._chain = [];
-        if (http.Server && http.WebSocketServer) {
+        if (Http.HttpServer && Http.WebSocketServer) {
             // Listen for HTTP connections.
-            this._webServer = new http.Server();
+            this._webServer = new Http.HttpServer();
         }
     }
     MyRestify.prototype.use = function (method) {
@@ -52,14 +52,13 @@ var MyRestify = (function () {
     MyRestify.prototype._startListening = function () {
         var self = this;
 
-        this._webServer.addEventListener('request', function (req) {
+        this._webServer.on('request', function (req) {
             console.log(req.headers['url']);
             var url = req.headers['url'].split("?")[0];
-            var request = new MyHttpRequest(req);
-            if (request.headers['method'] = 'GET')
-                self._notifyGet(url, request);
-            else if (request.headers['method'] = 'POST')
-                self._notifyPost(url, request);
+            if (req.headers['method'] = 'GET')
+                self._notifyGet(url, req);
+            else if (req.headers['method'] = 'POST')
+                self._notifyPost(url, req);
             return true;
         });
     };
@@ -80,6 +79,7 @@ var MyRestify = (function () {
     MyRestify.prototype._notifyGet = function (path, req) {
         var _this = this;
         console.log("notify get " + path);
+        console.log(req);
         var matchID = this._matchIndex(path);
         if (matchID == -1) {
             this._send404Message(req);
@@ -89,9 +89,6 @@ var MyRestify = (function () {
         var _applyChain = function (counter, req, res, callback) {
             if (counter >= _this._chain.length) {
                 callback(req, res, function () {
-                    res.finished_ = true;
-                    console.log(res.headers);
-                    res.headers['Connection'] = "closing";
                     //res.checkFinished_();
                 });
                 return;
@@ -104,6 +101,10 @@ var MyRestify = (function () {
 
         var options = {};
         options['method'] = req.headers['method'];
+        options.connection = {};
+        options.connection.remoteAddress = req.remoteAddress;
+        console.log("notifyget-------");
+        console.log(req.remoteAddress);
         _applyChain(0, options, req, function (req, res, next) {
             _this._getCallbackHash[matcher.sourceURL](req, res, next);
         });
@@ -120,8 +121,6 @@ var MyRestify = (function () {
         var _applyChain = function (counter, req, res, callback) {
             if (counter >= _this._chain.length) {
                 callback(req, res, function () {
-                    res.finished_ = true;
-                    res.headers['Connection'] = "closing";
                     //res.checkFinished_();
                 });
                 return;
@@ -134,6 +133,8 @@ var MyRestify = (function () {
 
         var options = {};
         options['method'] = req.headers['method'];
+        options.connection = {};
+        options.connection.remoteAddress = req.remoteAddress;
         _applyChain(0, options, req, function (req, res, next) {
             _this._postCallbackHash[matcher.sourceURL](req, res, next);
         });
@@ -155,6 +156,7 @@ var MyRestify = (function () {
     };
 
     MyRestify.prototype._send404Message = function (req) {
+        console.log("404=============");
         var errorMessage = "404 Not Found";
         req.writeHead(200, {
             'Content-Type': "text/plain",
@@ -168,6 +170,7 @@ var MyRestify = (function () {
         req.headers['Connection'] = "closing";
         req.checkFinished_();
     };
+
     MyRestify.prototype.webServer = function () {
         return this._webServer;
     };
@@ -216,11 +219,8 @@ var WebSocketServer = (function (_super) {
         var myRestify = params.server;
         _super.call(this, myRestify.webServer());
     }
-    WebSocketServer.prototype.on = function (method, callback) {
-        this.addEventListener(method, callback);
-    };
     return WebSocketServer;
-})(http.WebSocketServer);
+})(Http.WebSocketServer);
 
 var url = (function () {
     function url() {
@@ -249,23 +249,5 @@ var url = (function () {
         return parseItem(0, paramArray);
     };
     return url;
-})();
-
-var MyHttpRequest = (function () {
-    function MyHttpRequest(request) {
-        this._request = request;
-        this.headers = request.headers;
-    }
-    MyHttpRequest.prototype.setHeader = function (method, value) {
-        this.headers[method] = value;
-    };
-
-    MyHttpRequest.prototype.send = function (message) {
-        this.headers['Content-Type'] = this._request.contentType;
-        this.headers['Content-Length'] = "" + message.length;
-        this._request.writeHead(200, this.headers);
-        this._request.write(message);
-    };
-    return MyHttpRequest;
 })();
 //# sourceMappingURL=adapter.js.map

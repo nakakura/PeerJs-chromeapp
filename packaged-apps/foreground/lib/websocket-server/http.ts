@@ -1,18 +1,13 @@
 ///<reference path="./sha1.d.ts"/>
-var __extends = this.__extends || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    __.prototype = b.prototype;
-    d.prototype = new __();
-};
 
-var Http;
-(function (Http) {
-    var _responseMap;
+declare var chrome;
+
+module Http{
+    var _responseMap: {[key: string]: string;};
     initialize();
 
-    function initialize() {
-        // Http response code strings.
+    function initialize(): void{
+// Http response code strings.
         _responseMap = {
             200: 'OK',
             301: 'Moved Permanently',
@@ -27,35 +22,38 @@ var Http;
         };
     }
 
-    function arrayBufferToString(buffer) {
-        var array = new Uint8Array(buffer);
-        var str = '';
+    function arrayBufferToString(buffer: Array<number>): string{
+        var array: Uint8Array = new Uint8Array(buffer);
+        var str: string = '';
         for (var i = 0; i < array.length; ++i) {
             str += String.fromCharCode(array[i]);
         }
         return str;
     }
 
-    function stringToArrayBuffer(srcString) {
-        var buffer = new ArrayBuffer(srcString.length);
-        var bufferView = new Uint8Array(buffer);
+    function stringToArrayBuffer(srcString: string): ArrayBuffer{
+        var buffer: ArrayBuffer = new ArrayBuffer(srcString.length);
+        var bufferView: Uint8Array = new Uint8Array(buffer);
         for (var i = 0; i < srcString.length; i++) {
             bufferView[i] = srcString.charCodeAt(i);
         }
         return buffer;
     }
 
-    var EventSource = (function () {
-        function EventSource() {
+    export class EventSource{
+        private _listeners: {[key: string]: Array<(any)=>void> };
+
+        constructor(){
             this._listeners = {};
         }
-        EventSource.prototype.on = function (type, callback) {
+
+        public on(type: string, callback: (any)=>void ): void{
             if (!this._listeners[type])
                 this._listeners[type] = [];
             this._listeners[type].push(callback);
-        };
+        }
 
-        EventSource.prototype._removeEventListener = function (type, callback) {
+        private _removeEventListener(type: string, callback: ()=>void ): void{
             if (!this._listeners[type])
                 return;
             for (var i = this._listeners[type].length - 1; i >= 0; i--) {
@@ -63,71 +61,66 @@ var Http;
                     this._listeners[type].splice(i, 1);
                 }
             }
-        };
+        }
 
-        EventSource.prototype.dispatchEvent = function (type) {
-            var var_args = [];
-            for (var _i = 0; _i < (arguments.length - 1); _i++) {
-                var_args[_i] = arguments[_i + 1];
-            }
+        public dispatchEvent(type: string, ...var_args: any[]): boolean{
             if (!this._listeners[type])
                 return false;
             for (var i = 0; i < this._listeners[type].length; i++) {
-                if (this._listeners[type][i].apply(null, var_args)) {
+                if (this._listeners[type][i].apply(
+                    null,
+                    var_args)) {
                     return true;
                 }
             }
             return false;
-        };
-        return EventSource;
-    })();
-    Http.EventSource = EventSource;
+        }
+    }
 
-    var HttpServer = (function (_super) {
-        __extends(HttpServer, _super);
-        function HttpServer() {
-            _super.call(this);
+    export class HttpServer extends EventSource{
+        private _readyState: number;
+        private _socketInfo: {[key: string]: number};
+
+        constructor(){
+            super();
             this._readyState = 0;
         }
-        HttpServer.prototype.listen = function (port) {
-            var opt_host = [];
-            for (var _i = 0; _i < (arguments.length - 1); _i++) {
-                opt_host[_i] = arguments[_i + 1];
-            }
-            var t = this;
-            chrome.socket.create('tcp', {}, function (socketInfo) {
+
+        public listen(port: number, ...opt_host: string[]): void{
+            var t: HttpServer = this;
+            chrome.socket.create('tcp', {}, function(socketInfo) {
                 t._socketInfo = socketInfo;
-                var address = '0.0.0.0';
-                if (opt_host.length > 0)
-                    address = opt_host[0];
-                chrome.runtime.getBackgroundPage(function (bgPage) {
-                    if (bgPage.oldSocketId !== undefined)
+                var address: string = '0.0.0.0';
+                if(opt_host.length > 0) address = opt_host[0];
+                chrome.runtime.getBackgroundPage(function(bgPage) {
+                    if(bgPage.oldSocketId !== undefined)
                         chrome.socket.destroy(bgPage.oldSocketId);
-                    chrome.socket.listen(t._socketInfo['socketId'], address, port, 50, function (result) {
+                    chrome.socket.listen(t._socketInfo['socketId'], address, port, 50, function(result) {
                         t._readyState = 1;
                         t._acceptConnection(t._socketInfo['socketId']);
                         bgPage.oldSocketId = t._socketInfo['socketId'];
                     });
                 });
-            });
-        };
 
-        HttpServer.prototype._acceptConnection = function (socketId) {
-            var t = this;
-            chrome.socket.accept(t._socketInfo['socketId'], function (acceptInfo) {
+            });
+        }
+
+        private _acceptConnection(socketId: number): void{
+            var t: HttpServer = this;
+            chrome.socket.accept(t._socketInfo['socketId'], function(acceptInfo) {
                 t._onConnection(acceptInfo);
                 t._acceptConnection(socketId);
             });
-        };
+        }
 
-        HttpServer.prototype._onConnection = function (acceptInfo) {
+        private _onConnection(acceptInfo: {[key:string]: number}): void{
             this._readRequestFromSocket(acceptInfo['socketId']);
-        };
+        }
 
-        HttpServer.prototype._readRequestFromSocket = function (socketId) {
-            var self = this;
-            var requestData = '';
-            var endIndex = 0;
+        private _readRequestFromSocket(socketId: number): void{
+            var self: HttpServer = this;
+            var requestData: string = '';
+            var endIndex: number = 0;
             function onDataRead(readInfo) {
                 // Check if connection closed.
                 if (readInfo.resultCode <= 0) {
@@ -136,7 +129,6 @@ var Http;
                     return;
                 }
                 requestData += arrayBufferToString(readInfo.data).replace(/\r\n/g, '\n');
-
                 // Check for end of request.
                 endIndex = requestData.indexOf('\n\n', endIndex);
                 if (endIndex == -1) {
@@ -145,11 +137,10 @@ var Http;
                     return;
                 }
 
-                var headers = requestData.substring(0, endIndex).split('\n');
-                var headerMap = {};
-
+                var headers: string[] = requestData.substring(0, endIndex).split('\n');
+                var headerMap: {[key: string]: string} = {};
                 // headers[0] should be the Request-Line
-                var requestLine = headers[0].split(' ');
+                var requestLine: string[] = headers[0].split(' ');
                 headerMap['method'] = requestLine[0];
                 headerMap['url'] = requestLine[1];
                 headerMap['Http-Version'] = requestLine[2];
@@ -158,48 +149,57 @@ var Http;
                     if (requestLine.length == 2)
                         headerMap[requestLine[0]] = requestLine[1].trim();
                 }
-                var request = new HttpRequest(headerMap, socketId);
+                var request: HttpRequest = new HttpRequest(headerMap, socketId);
                 chrome.socket.getInfo(socketId, function (socketInfo) {
                     request.remoteAddress = socketInfo['peerAddress'];
                     self._onRequest(request);
                 });
             }
             chrome.socket.read(socketId, onDataRead);
-        };
+        }
 
-        HttpServer.prototype._onRequest = function (request) {
-            var type = request.headers['Upgrade'] ? 'upgrade' : 'request';
-            var keepAlive = request.headers['Connection'] == 'keep-alive';
+        private _onRequest(request: HttpRequest): void{
+            var type: string = request.headers['Upgrade'] ? 'upgrade' : 'request';
+            var keepAlive: boolean = request.headers['Connection'] == 'keep-alive';
             if (!this.dispatchEvent(type, request))
                 request.close();
             else if (keepAlive)
                 this._readRequestFromSocket(request.socketId);
-        };
+        }
 
-        HttpServer.prototype.socketId = function () {
+        public socketId(): number{
             return this._socketInfo['socketId'];
-        };
-        return HttpServer;
-    })(EventSource);
-    Http.HttpServer = HttpServer;
+        }
+    }
 
-    var HttpRequest = (function (_super) {
-        __extends(HttpRequest, _super);
-        function HttpRequest(headers, socketId) {
-            _super.call(this);
-            this.contentType = "";
-            this.remoteAddress = "";
-            this.extensionTypes = {
-                'css': 'text/css',
-                'html': 'text/html',
-                'htm': 'text/html',
-                'jpg': 'image/jpeg',
-                'jpeg': 'image/jpeg',
-                'js': 'text/javascript',
-                'png': 'image/png',
-                'svg': 'image/svg+xml',
-                'txt': 'text/plain'
-            };
+    export class HttpRequest extends EventSource{
+        public version: string;
+        public headers: {[key: string]: string};
+        private _responseHeaders: {[key: string]: string};
+        public headersSent: boolean;
+        public socketId: number;
+        private _writes: number;
+        public bytesRemaining: number;
+        private _finished: boolean;
+        public readyState: number;
+        public contentType: string = "";
+        public remoteAddress: string = "";
+
+        extensionTypes: {[key: string]: string} =
+        {
+            'css': 'text/css',
+            'html': 'text/html',
+            'htm': 'text/html',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'js': 'text/javascript',
+            'png': 'image/png',
+            'svg': 'image/svg+xml',
+            'txt': 'text/plain'
+        };
+
+        constructor(headers: {[key: string]: string}, socketId: number){
+            super();
 
             this.version = 'HTTP/1.1';
             this.headers = headers;
@@ -211,25 +211,27 @@ var Http;
             this._finished = false;
             this.readyState = 1;
         }
-        HttpRequest.prototype.close = function () {
+
+        public close(): void{
             if (this.headers['Connection'] != 'keep-alive') {
                 chrome.socket.disconnect(this.socketId);
                 chrome.socket.destroy(this.socketId);
             }
             this.socketId = 0;
             this.readyState = 3;
-        };
+        }
 
-        HttpRequest.prototype.setHeader = function (key, value) {
+        public setHeader(key: string, value: string): void{
             this._responseHeaders[key] = value;
-        };
+        }
 
-        HttpRequest.prototype.writeHead = function (responseCode, responseHeaders) {
-            for (var key in this._responseHeaders) {
+        public writeHead(responseCode: number, responseHeaders: any): void{
+            for(var key in this._responseHeaders) {
                 responseHeaders[key] = this._responseHeaders[key];
             }
 
-            var headerString = this.version + ' ' + responseCode + ' ' + (_responseMap[responseCode] || 'Unknown');
+            var headerString: string = this.version + ' ' + responseCode + ' ' +
+                (_responseMap[responseCode] || 'Unknown');
             this._responseHeaders = responseHeaders;
             if (this.headers['Connection'] == 'keep-alive')
                 responseHeaders['Connection'] = 'keep-alive';
@@ -240,15 +242,15 @@ var Http;
             }
             headerString += '\r\n\r\n';
             this._write(stringToArrayBuffer(headerString));
-        };
+        }
 
-        HttpRequest.prototype.write = function (data) {
+        public write(data: any): void{
             if (this._responseHeaders['Transfer-Encoding'] == 'chunked') {
-                var newline = '\r\n';
-                var byteLength = (data instanceof ArrayBuffer) ? data.byteLength : data.length;
-                var chunkLength = byteLength.toString(16).toUpperCase() + newline;
-                var buffer = new ArrayBuffer(chunkLength.length + byteLength + newline.length);
-                var bufferView = new Uint8Array(buffer);
+                var newline: string = '\r\n';
+                var byteLength: number = (data instanceof ArrayBuffer) ? data.byteLength : data.length;
+                var chunkLength: string = byteLength.toString(16).toUpperCase() + newline;
+                var buffer: ArrayBuffer = new ArrayBuffer(chunkLength.length + byteLength + newline.length);
+                var bufferView: Uint8Array = new Uint8Array(buffer);
                 for (var i = 0; i < chunkLength.length; i++)
                     bufferView[i] = chunkLength.charCodeAt(i);
                 if (data instanceof ArrayBuffer) {
@@ -264,30 +266,30 @@ var Http;
                 data = stringToArrayBuffer(data);
             }
             this._write(data);
-        };
+        }
 
-        HttpRequest.prototype.end = function (opt_data) {
+        public end(opt_data: ArrayBuffer): void{
             if (opt_data)
                 this.write(opt_data);
             if (this._responseHeaders['Transfer-Encoding'] == 'chunked')
                 this.write('');
             this._finished = true;
             this._checkFinished();
-        };
+        }
 
-        HttpRequest.prototype.serveUrl = function (url) {
-            var t = this;
-            var xhr = new XMLHttpRequest();
-            xhr.onloadend = function () {
-                var type = 'text/plain';
+        public serveUrl(url: string): void{
+            var t: HttpRequest = this;
+            var xhr: XMLHttpRequest = new XMLHttpRequest();
+            xhr.onloadend = function() {
+                var type: string = 'text/plain';
                 if (this.getResponseHeader('Content-Type')) {
                     type = this.getResponseHeader('Content-Type');
                 } else if (url.indexOf('.') != -1) {
-                    var extension = url.substr(url.indexOf('.') + 1);
+                    var extension: string = url.substr(url.indexOf('.') + 1);
                     type = t.extensionTypes[extension] || type;
                 }
 
-                var contentLength = this.getResponseHeader('Content-Length');
+                var contentLength: number = this.getResponseHeader('Content-Length');
                 if (xhr.status == 200)
                     contentLength = (this.response && this.response.byteLength) || 0;
 
@@ -301,80 +303,77 @@ var Http;
             xhr.open('GET', url, true);
             xhr.responseType = 'arraybuffer';
             xhr.send();
-        };
+        }
 
-        HttpRequest.prototype._write = function (array) {
-            var t = this;
+        private _write(array: ArrayBuffer): void{
+            var t: HttpRequest = this;
             this.bytesRemaining += array.byteLength;
-            chrome.socket.write(this.socketId, array, function (writeInfo) {
+            chrome.socket.write(this.socketId, array, function(writeInfo) {
                 if (writeInfo.bytesWritten < 0) {
                     return;
                 }
                 t.bytesRemaining -= writeInfo.bytesWritten;
                 t._checkFinished();
             });
-        };
+        }
 
-        HttpRequest.prototype._checkFinished = function () {
+        private _checkFinished(): void{
             if (!this._finished || this.bytesRemaining > 0)
                 return;
             this.close();
-        };
+        }
 
-        HttpRequest.prototype.send = function (message) {
+        public send(message: string): void{
             var header = {};
             header['Content-Type'] = this.contentType;
             header['Content-Length'] = "" + message.length;
             this.writeHead(200, header);
             this.write(message);
-        };
-        return HttpRequest;
-    })(EventSource);
-    Http.HttpRequest = HttpRequest;
+        }
+    }
 
-    var WebSocketServer = (function (_super) {
-        __extends(WebSocketServer, _super);
-        function WebSocketServer(httpServer) {
-            _super.call(this);
+    export class WebSocketServer extends EventSource{
+        constructor(httpServer: HttpServer){
+            super();
             httpServer.on('upgrade', this._upgradeToWebSocket.bind(this));
         }
-        WebSocketServer.prototype._upgradeToWebSocket = function (request) {
-            if (request.headers['Upgrade'] != 'websocket' || !request.headers['Sec-WebSocket-Key']) {
+
+        private _upgradeToWebSocket(request): boolean{
+            if (request.headers['Upgrade'] != 'websocket' ||
+                !request.headers['Sec-WebSocket-Key']) {
                 return false;
             }
 
             var socket = new WebSocketRequest(request).accept();
-            if (this.dispatchEvent('connection', socket)) {
+            if (this.dispatchEvent('connection', socket)){
                 if (request._socketId)
                     request.reject();
                 return true;
             }
 
             return false;
-        };
-        return WebSocketServer;
-    })(EventSource);
-    Http.WebSocketServer = WebSocketServer;
+        }
+    }
 
-    var WebSocketRequest = (function (_super) {
-        __extends(WebSocketRequest, _super);
-        function WebSocketRequest(httpRequest) {
-            _super.call(this, httpRequest.headers, httpRequest.socketId);
+    class WebSocketRequest extends HttpRequest{
+        constructor(httpRequest: HttpRequest){
+            super(httpRequest.headers, httpRequest.socketId);
             httpRequest.socketId = 0;
         }
-        WebSocketRequest.prototype.accept = function () {
+
+        public accept(): WebSocketServerSocket{
             // Construct WebSocket response key.
-            var clientKey = this.headers['Sec-WebSocket-Key'];
-            var toArray = function (str) {
-                var a = [];
+            var clientKey: string = this.headers['Sec-WebSocket-Key'];
+            var toArray: (string)=>number[] = function(str: string) {
+                var a: number[] = [];
                 for (var i = 0; i < str.length; i++) {
                     a.push(str.charCodeAt(i));
                 }
                 return a;
             };
 
-            var toString = function (a) {
-                var str = '';
+            var toString: (a: number[])=>string = function(a) {
+                var str: string = '';
                 for (var i = 0; i < a.length; i++) {
                     str += String.fromCharCode(a[i]);
                 }
@@ -383,15 +382,15 @@ var Http;
 
             // Magic string used for http connection key hashing:
             // http://en.wikipedia.org/wiki/WebSocket
-            var magicStr = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+            var magicStr: string = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
             // clientKey is base64 encoded key.
             clientKey += magicStr;
-            var sha1 = new Sha1();
+            var sha1: Sha1 = new Sha1();
             sha1.reset();
-            var array = toArray(clientKey);
+            var array: number[] = toArray(clientKey)
             sha1.update(array, array.length);
-            var responseKey = btoa(toString(sha1.digest()));
+            var responseKey: string = btoa(toString(sha1.digest()));
 
             var responseHeader = {
                 "Upgrade": 'websocket',
@@ -401,47 +400,48 @@ var Http;
             if (this.headers['Sec-WebSocket-Protocol'])
                 responseHeader['Sec-WebSocket-Protocol'] = this.headers['Sec-WebSocket-Protocol'];
             this.writeHead(101, responseHeader);
-            var socket = new WebSocketServerSocket(this.socketId);
+            var socket: WebSocketServerSocket = new WebSocketServerSocket(this.socketId);
             socket.upgradeReq['socket'] = this;
             socket.upgradeReq['url'] = this.headers['url'];
-
             // Detach the socket so that we don't use it anymore.
             this.socketId = 0;
             return socket;
-        };
+        }
 
-        WebSocketRequest.prototype.reject = function () {
+        public reject(){
             this.close();
-        };
-        return WebSocketRequest;
-    })(HttpRequest);
+        }
+    }
 
-    var WebSocketServerSocket = (function (_super) {
-        __extends(WebSocketServerSocket, _super);
-        function WebSocketServerSocket(socketId) {
-            _super.call(this);
-            this.peerjsID = "";
-            this.upgradeReq = {};
+    export class WebSocketServerSocket extends EventSource{
+        private _socketId: number;
+        public readyState: number;
+        public peerjsID: string = "";
+        public upgradeReq = {};
+
+        constructor(socketId: number){
+            super();
             this._socketId = socketId;
             this._readFromSocket();
         }
-        WebSocketServerSocket.prototype.send = function (data) {
-            this._sendFrame(1, data);
-        };
 
-        WebSocketServerSocket.prototype.close = function () {
+        public send(data: string): void{
+            this._sendFrame(1, data);
+        }
+
+        public close(): void{
             this._sendFrame(8, null);
             this.readyState = 2;
-        };
+        }
 
-        WebSocketServerSocket.prototype._readFromSocket = function () {
-            var t = this;
-            var data = [];
-            var message = '';
-            var fragmentedOp = 0;
-            var fragmentedMessage = '';
+        private _readFromSocket(): void{
+            var t: WebSocketServerSocket = this;
+            var data: number[] = [];
+            var message: string = '';
+            var fragmentedOp: number = 0;
+            var fragmentedMessage: string = '';
 
-            var onDataRead = function (readInfo) {
+            var onDataRead = function(readInfo) {
                 if (readInfo.resultCode <= 0) {
                     t._close();
                     return;
@@ -451,21 +451,22 @@ var Http;
                     return;
                 }
 
-                var a = new Uint8Array(readInfo.data);
+                var a: Uint8Array = new Uint8Array(readInfo.data);
                 for (var i = 0; i < a.length; i++)
                     data.push(a[i]);
 
                 while (data.length) {
-                    var length_code = -1;
-                    var data_start = 6;
-                    var mask;
-                    var fin = (data[0] & 128) >> 7;
-                    var op = data[0] & 15;
+                    var length_code: number = -1;
+                    var data_start: number = 6;
+                    var mask: number[];
+                    var fin: number = (data[0] & 128) >> 7;
+                    var op: number = data[0] & 15;
 
                     if (data.length > 1)
                         length_code = data[1] & 127;
                     if (length_code > 125) {
-                        if ((length_code == 126 && data.length > 7) || (length_code == 127 && data.length > 14)) {
+                        if ((length_code == 126 && data.length > 7) ||
+                            (length_code == 127 && data.length > 14)) {
                             if (length_code == 126) {
                                 length_code = data[2] * 256 + data[3];
                                 mask = data.slice(4, 8);
@@ -487,7 +488,7 @@ var Http;
                     }
 
                     if (length_code > -1 && data.length >= data_start + length_code) {
-                        var decoded = data.slice(data_start, data_start + length_code).map(function (byte, index) {
+                        var decoded: number[] = data.slice(data_start, data_start + length_code).map(function(byte, index) {
                             return byte ^ mask[index % 4];
                         });
                         data = data.slice(data_start + length_code);
@@ -507,17 +508,17 @@ var Http;
                             }
                         }
                     } else {
-                        break;
+                        break; // Insufficient data, wait for more.
                     }
                 }
                 chrome.socket.read(t._socketId, onDataRead);
             };
             chrome.socket.read(this._socketId, onDataRead);
-        };
+        }
 
-        WebSocketServerSocket.prototype._onFrame = function (op, data) {
+        private _onFrame(op: number, data: string): boolean{
             if (op == 1) {
-                this.dispatchEvent('message', { 'data': data });
+                this.dispatchEvent('message', {'data': data});
             } else if (op == 8) {
                 // A close message must be confirmed before the http is closed.
                 if (this.readyState == 1) {
@@ -528,55 +529,54 @@ var Http;
                 }
             }
             return true;
-        };
+        }
 
-        WebSocketServerSocket.prototype._sendFrame = function (op, data) {
-            var t = this;
-            var WebsocketFrameString = function (op, str) {
-                var length = str.length;
+        private _sendFrame(op: number, data: string){
+            var t: WebSocketServerSocket = this;
+            var WebsocketFrameString: (number, string)=>ArrayBuffer = function(op: number, str: string) {
+                var length: number = str.length;
                 if (str.length > 65535)
                     length += 10;
                 else if (str.length > 125)
                     length += 4;
                 else
                     length += 2;
-                var lengthBytes = 0;
-                var buffer = new ArrayBuffer(length);
-                var bv = new Uint8Array(buffer);
+                var lengthBytes: number = 0;
+                var buffer: ArrayBuffer = new ArrayBuffer(length);
+                var bv: Uint8Array = new Uint8Array(buffer);
                 bv[0] = 128 | (op & 15); // Fin and type text.
-                bv[1] = str.length > 65535 ? 127 : (str.length > 125 ? 126 : str.length);
+                bv[1] = str.length > 65535 ? 127 :
+                    (str.length > 125 ? 126 : str.length);
                 if (str.length > 65535)
                     lengthBytes = 8;
                 else if (str.length > 125)
                     lengthBytes = 2;
-                var len = str.length;
+                var len: number = str.length;
                 for (var i = lengthBytes - 1; i >= 0; i--) {
                     bv[2 + i] = len & 255;
                     len = len >> 8;
                 }
-                var dataStart = lengthBytes + 2;
+                var dataStart: number = lengthBytes + 2;
                 for (var i = 0; i < str.length; i++) {
                     bv[dataStart + i] = str.charCodeAt(i);
                 }
                 return buffer;
             };
 
-            var array = WebsocketFrameString(op, data || '');
-            chrome.socket.write(this._socketId, array, function (writeInfo) {
-                if (writeInfo['resultCode'] < 0 || writeInfo['bytesWritten'] !== array.byteLength) {
+            var array: ArrayBuffer = WebsocketFrameString(op, data || '');
+            chrome.socket.write(this._socketId, array, function(writeInfo: {[key: string]: number}) {
+                if (writeInfo['resultCode'] < 0 ||
+                    writeInfo['bytesWritten'] !== array.byteLength) {
                     t._close();
                 }
             });
-        };
+        }
 
-        WebSocketServerSocket.prototype._close = function () {
+        private _close(): void{
             chrome.socket.disconnect(this._socketId);
             chrome.socket.destroy(this._socketId);
             this.readyState = 3;
             this.dispatchEvent('close');
-        };
-        return WebSocketServerSocket;
-    })(EventSource);
-    Http.WebSocketServerSocket = WebSocketServerSocket;
-})(Http || (Http = {}));
-//# sourceMappingURL=http.js.map
+        }
+    }
+}
