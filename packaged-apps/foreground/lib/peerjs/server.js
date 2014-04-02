@@ -60,7 +60,7 @@ PeerServer.prototype._initializeWSS = function() {
     var self = this;
 
     // Create WebSocket server as well.
-    this._wss = new WebSocketServer({ path: '/peerjs', server: this._app});
+    this._wss = new If.Adapter.WebSocketServer({ path: '/peerjs', server: this._app});
 
     this._wss.on('connection', function(socket) {
         console.log("wss on");
