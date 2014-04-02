@@ -65,9 +65,12 @@ var If;
                 this._getCallbackHash = {};
                 this._postCallbackHash = {};
                 this._chain = [];
-                if (Http.HttpServer && Http.WebSocketServer) {
+                console.log("myrestify1");
+                if (http.HttpServer && http.WebSocketServer) {
+                    console.log("myrestify2");
+
                     // Listen for HTTP connections.
-                    this._webServer = new Http.HttpServer();
+                    this._webServer = new http.HttpServer();
                 }
             }
             MyRestify.prototype.use = function (method) {
@@ -191,6 +194,7 @@ var If;
             };
 
             MyRestify.prototype.webServer = function () {
+                console.log(this._webServer);
                 return this._webServer;
             };
 
@@ -232,11 +236,13 @@ var If;
         var WebSocketServer = (function (_super) {
             __extends(WebSocketServer, _super);
             function WebSocketServer(params) {
+                console.log("websocketserver");
+                console.log(params);
                 var myRestify = params.server;
                 _super.call(this, myRestify.webServer());
             }
             return WebSocketServer;
-        })(Http.WebSocketServer);
+        })(http.WebSocketServer);
         Adapter.WebSocketServer = WebSocketServer;
     })(If.Adapter || (If.Adapter = {}));
     var Adapter = If.Adapter;

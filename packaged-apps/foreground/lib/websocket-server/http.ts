@@ -2,7 +2,7 @@
 
 declare var chrome;
 
-module Http{
+module http{
     var _responseMap: {[key: string]: string;};
     initialize();
 
@@ -87,18 +87,20 @@ module Http{
         }
 
         public listen(port: number, ...opt_host: string[]): void{
-            var t: HttpServer = this;
-            chrome.socket.create('tcp', {}, function(socketInfo) {
-                t._socketInfo = socketInfo;
+            chrome.socket.create('tcp', {}, (socketInfo)=> {
+                this._socketInfo = socketInfo;
                 var address: string = '0.0.0.0';
                 if(opt_host.length > 0) address = opt_host[0];
-                chrome.runtime.getBackgroundPage(function(bgPage) {
-                    if(bgPage.oldSocketId !== undefined)
+                chrome.runtime.getBackgroundPage((bgPage)=> {
+                    console.log(bgPage.oldSocketId);
+                    if(bgPage.oldSocketId !== undefined){
+                        chrome.socket.disconnect(bgPage.oldSocketId);
                         chrome.socket.destroy(bgPage.oldSocketId);
-                    chrome.socket.listen(t._socketInfo['socketId'], address, port, 50, function(result) {
-                        t._readyState = 1;
-                        t._acceptConnection(t._socketInfo['socketId']);
-                        bgPage.oldSocketId = t._socketInfo['socketId'];
+                    }
+                    chrome.socket.listen(this._socketInfo['socketId'], address, port, 50, (result)=> {
+                        this._readyState = 1;
+                        this._acceptConnection(this._socketInfo['socketId']);
+                        bgPage.oldSocketId = this._socketInfo['socketId'];
                     });
                 });
 
@@ -106,10 +108,9 @@ module Http{
         }
 
         private _acceptConnection(socketId: number): void{
-            var t: HttpServer = this;
-            chrome.socket.accept(t._socketInfo['socketId'], function(acceptInfo) {
-                t._onConnection(acceptInfo);
-                t._acceptConnection(socketId);
+            chrome.socket.accept(this._socketInfo['socketId'], (acceptInfo)=> {
+                this._onConnection(acceptInfo);
+                this._acceptConnection(socketId);
             });
         }
 
@@ -118,10 +119,9 @@ module Http{
         }
 
         private _readRequestFromSocket(socketId: number): void{
-            var self: HttpServer = this;
             var requestData: string = '';
             var endIndex: number = 0;
-            function onDataRead(readInfo) {
+            var onDataRead = (readInfo)=> {
                 // Check if connection closed.
                 if (readInfo.resultCode <= 0) {
                     chrome.socket.disconnect(socketId);
@@ -150,9 +150,9 @@ module Http{
                         headerMap[requestLine[0]] = requestLine[1].trim();
                 }
                 var request: HttpRequest = new HttpRequest(headerMap, socketId);
-                chrome.socket.getInfo(socketId, function (socketInfo) {
+                chrome.socket.getInfo(socketId, (socketInfo)=> {
                     request.remoteAddress = socketInfo['peerAddress'];
-                    self._onRequest(request);
+                    this._onRequest(request);
                 });
             }
             chrome.socket.read(socketId, onDataRead);
@@ -306,14 +306,13 @@ module Http{
         }
 
         private _write(array: ArrayBuffer): void{
-            var t: HttpRequest = this;
             this.bytesRemaining += array.byteLength;
-            chrome.socket.write(this.socketId, array, function(writeInfo) {
+            chrome.socket.write(this.socketId, array, (writeInfo)=> {
                 if (writeInfo.bytesWritten < 0) {
                     return;
                 }
-                t.bytesRemaining -= writeInfo.bytesWritten;
-                t._checkFinished();
+                this.bytesRemaining -= writeInfo.bytesWritten;
+                this._checkFinished();
             });
         }
 
@@ -435,19 +434,18 @@ module Http{
         }
 
         private _readFromSocket(): void{
-            var t: WebSocketServerSocket = this;
             var data: number[] = [];
             var message: string = '';
             var fragmentedOp: number = 0;
             var fragmentedMessage: string = '';
 
-            var onDataRead = function(readInfo) {
+            var onDataRead = (readInfo)=> {
                 if (readInfo.resultCode <= 0) {
-                    t._close();
+                    this._close();
                     return;
                 }
                 if (!readInfo.data.byteLength) {
-                    chrome.socket.read(t._socketId, onDataRead);
+                    chrome.socket.read(this._socketId, onDataRead);
                     return;
                 }
 
@@ -494,14 +492,14 @@ module Http{
                         data = data.slice(data_start + length_code);
                         if (fin && op > 0) {
                             // Unfragmented message.
-                            if (!t._onFrame(op, arrayBufferToString(decoded)))
+                            if (!this._onFrame(op, arrayBufferToString(decoded)))
                                 return;
                         } else {
                             // Fragmented message.
                             fragmentedOp = fragmentedOp || op;
                             fragmentedMessage += arrayBufferToString(decoded);
                             if (fin) {
-                                if (!t._onFrame(fragmentedOp, fragmentedMessage))
+                                if (!this._onFrame(fragmentedOp, fragmentedMessage))
                                     return;
                                 fragmentedOp = 0;
                                 fragmentedMessage = '';
@@ -511,7 +509,7 @@ module Http{
                         break; // Insufficient data, wait for more.
                     }
                 }
-                chrome.socket.read(t._socketId, onDataRead);
+                chrome.socket.read(this._socketId, onDataRead);
             };
             chrome.socket.read(this._socketId, onDataRead);
         }
@@ -532,8 +530,7 @@ module Http{
         }
 
         private _sendFrame(op: number, data: string){
-            var t: WebSocketServerSocket = this;
-            var WebsocketFrameString: (number, string)=>ArrayBuffer = function(op: number, str: string) {
+            var WebsocketFrameString: (number, string)=>ArrayBuffer = (op: number, str: string)=> {
                 var length: number = str.length;
                 if (str.length > 65535)
                     length += 10;
@@ -564,10 +561,10 @@ module Http{
             };
 
             var array: ArrayBuffer = WebsocketFrameString(op, data || '');
-            chrome.socket.write(this._socketId, array, function(writeInfo: {[key: string]: number}) {
+            chrome.socket.write(this._socketId, array, (writeInfo: {[key: string]: number})=> {
                 if (writeInfo['resultCode'] < 0 ||
                     writeInfo['bytesWritten'] !== array.byteLength) {
-                    t._close();
+                    this._close();
                 }
             });
         }

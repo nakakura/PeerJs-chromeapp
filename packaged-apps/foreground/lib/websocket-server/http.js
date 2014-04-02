@@ -6,8 +6,8 @@ var __extends = this.__extends || function (d, b) {
     d.prototype = new __();
 };
 
-var Http;
-(function (Http) {
+var http;
+(function (http) {
     var _responseMap;
     initialize();
 
@@ -81,7 +81,7 @@ var Http;
         };
         return EventSource;
     })();
-    Http.EventSource = EventSource;
+    http.EventSource = EventSource;
 
     var HttpServer = (function (_super) {
         __extends(HttpServer, _super);
@@ -90,33 +90,36 @@ var Http;
             this._readyState = 0;
         }
         HttpServer.prototype.listen = function (port) {
+            var _this = this;
             var opt_host = [];
             for (var _i = 0; _i < (arguments.length - 1); _i++) {
                 opt_host[_i] = arguments[_i + 1];
             }
-            var t = this;
             chrome.socket.create('tcp', {}, function (socketInfo) {
-                t._socketInfo = socketInfo;
+                _this._socketInfo = socketInfo;
                 var address = '0.0.0.0';
                 if (opt_host.length > 0)
                     address = opt_host[0];
                 chrome.runtime.getBackgroundPage(function (bgPage) {
-                    if (bgPage.oldSocketId !== undefined)
+                    console.log(bgPage.oldSocketId);
+                    if (bgPage.oldSocketId !== undefined) {
+                        chrome.socket.disconnect(bgPage.oldSocketId);
                         chrome.socket.destroy(bgPage.oldSocketId);
-                    chrome.socket.listen(t._socketInfo['socketId'], address, port, 50, function (result) {
-                        t._readyState = 1;
-                        t._acceptConnection(t._socketInfo['socketId']);
-                        bgPage.oldSocketId = t._socketInfo['socketId'];
+                    }
+                    chrome.socket.listen(_this._socketInfo['socketId'], address, port, 50, function (result) {
+                        _this._readyState = 1;
+                        _this._acceptConnection(_this._socketInfo['socketId']);
+                        bgPage.oldSocketId = _this._socketInfo['socketId'];
                     });
                 });
             });
         };
 
         HttpServer.prototype._acceptConnection = function (socketId) {
-            var t = this;
-            chrome.socket.accept(t._socketInfo['socketId'], function (acceptInfo) {
-                t._onConnection(acceptInfo);
-                t._acceptConnection(socketId);
+            var _this = this;
+            chrome.socket.accept(this._socketInfo['socketId'], function (acceptInfo) {
+                _this._onConnection(acceptInfo);
+                _this._acceptConnection(socketId);
             });
         };
 
@@ -125,10 +128,10 @@ var Http;
         };
 
         HttpServer.prototype._readRequestFromSocket = function (socketId) {
-            var self = this;
+            var _this = this;
             var requestData = '';
             var endIndex = 0;
-            function onDataRead(readInfo) {
+            var onDataRead = function (readInfo) {
                 // Check if connection closed.
                 if (readInfo.resultCode <= 0) {
                     chrome.socket.disconnect(socketId);
@@ -161,9 +164,9 @@ var Http;
                 var request = new HttpRequest(headerMap, socketId);
                 chrome.socket.getInfo(socketId, function (socketInfo) {
                     request.remoteAddress = socketInfo['peerAddress'];
-                    self._onRequest(request);
+                    _this._onRequest(request);
                 });
-            }
+            };
             chrome.socket.read(socketId, onDataRead);
         };
 
@@ -181,7 +184,7 @@ var Http;
         };
         return HttpServer;
     })(EventSource);
-    Http.HttpServer = HttpServer;
+    http.HttpServer = HttpServer;
 
     var HttpRequest = (function (_super) {
         __extends(HttpRequest, _super);
@@ -304,14 +307,14 @@ var Http;
         };
 
         HttpRequest.prototype._write = function (array) {
-            var t = this;
+            var _this = this;
             this.bytesRemaining += array.byteLength;
             chrome.socket.write(this.socketId, array, function (writeInfo) {
                 if (writeInfo.bytesWritten < 0) {
                     return;
                 }
-                t.bytesRemaining -= writeInfo.bytesWritten;
-                t._checkFinished();
+                _this.bytesRemaining -= writeInfo.bytesWritten;
+                _this._checkFinished();
             });
         };
 
@@ -330,7 +333,7 @@ var Http;
         };
         return HttpRequest;
     })(EventSource);
-    Http.HttpRequest = HttpRequest;
+    http.HttpRequest = HttpRequest;
 
     var WebSocketServer = (function (_super) {
         __extends(WebSocketServer, _super);
@@ -354,7 +357,7 @@ var Http;
         };
         return WebSocketServer;
     })(EventSource);
-    Http.WebSocketServer = WebSocketServer;
+    http.WebSocketServer = WebSocketServer;
 
     var WebSocketRequest = (function (_super) {
         __extends(WebSocketRequest, _super);
@@ -435,7 +438,7 @@ var Http;
         };
 
         WebSocketServerSocket.prototype._readFromSocket = function () {
-            var t = this;
+            var _this = this;
             var data = [];
             var message = '';
             var fragmentedOp = 0;
@@ -443,11 +446,11 @@ var Http;
 
             var onDataRead = function (readInfo) {
                 if (readInfo.resultCode <= 0) {
-                    t._close();
+                    _this._close();
                     return;
                 }
                 if (!readInfo.data.byteLength) {
-                    chrome.socket.read(t._socketId, onDataRead);
+                    chrome.socket.read(_this._socketId, onDataRead);
                     return;
                 }
 
@@ -493,14 +496,14 @@ var Http;
                         data = data.slice(data_start + length_code);
                         if (fin && op > 0) {
                             // Unfragmented message.
-                            if (!t._onFrame(op, arrayBufferToString(decoded)))
+                            if (!_this._onFrame(op, arrayBufferToString(decoded)))
                                 return;
                         } else {
                             // Fragmented message.
                             fragmentedOp = fragmentedOp || op;
                             fragmentedMessage += arrayBufferToString(decoded);
                             if (fin) {
-                                if (!t._onFrame(fragmentedOp, fragmentedMessage))
+                                if (!_this._onFrame(fragmentedOp, fragmentedMessage))
                                     return;
                                 fragmentedOp = 0;
                                 fragmentedMessage = '';
@@ -510,7 +513,7 @@ var Http;
                         break;
                     }
                 }
-                chrome.socket.read(t._socketId, onDataRead);
+                chrome.socket.read(_this._socketId, onDataRead);
             };
             chrome.socket.read(this._socketId, onDataRead);
         };
@@ -531,7 +534,7 @@ var Http;
         };
 
         WebSocketServerSocket.prototype._sendFrame = function (op, data) {
-            var t = this;
+            var _this = this;
             var WebsocketFrameString = function (op, str) {
                 var length = str.length;
                 if (str.length > 65535)
@@ -564,7 +567,7 @@ var Http;
             var array = WebsocketFrameString(op, data || '');
             chrome.socket.write(this._socketId, array, function (writeInfo) {
                 if (writeInfo['resultCode'] < 0 || writeInfo['bytesWritten'] !== array.byteLength) {
-                    t._close();
+                    _this._close();
                 }
             });
         };
@@ -577,6 +580,6 @@ var Http;
         };
         return WebSocketServerSocket;
     })(EventSource);
-    Http.WebSocketServerSocket = WebSocketServerSocket;
-})(Http || (Http = {}));
+    http.WebSocketServerSocket = WebSocketServerSocket;
+})(http || (http = {}));
 //# sourceMappingURL=http.js.map

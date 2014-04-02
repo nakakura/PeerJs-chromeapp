@@ -10,11 +10,11 @@ module restify{
         return myRestify;
     }
 
-    export function bodyParser(options: any): (req: any, res: Http.HttpRequest, next: ()=>void)=>void{
+    export function bodyParser(options: any): (req: any, res: http.HttpRequest, next: ()=>void)=>void{
         return myRestify.bodyParser(options);
     }
 
-    export function queryParser(): (req: any, res: Http.HttpRequest, next: ()=>void)=>void{
+    export function queryParser(): (req: any, res: http.HttpRequest, next: ()=>void)=>void{
         return myRestify.queryParser();
     }
 }
@@ -44,19 +44,21 @@ class url{
 module If{
     export module Adapter{
         export class MyRestify{
-            private _webServer: Http.HttpServer;
+            private _webServer: http.HttpServer;
             private _matcherArray: App.URIMatcher[] = [];
             private _getCallbackHash: {[key: string]: (req: any, res: any, next: ()=>void)=>void} = {};
             private _postCallbackHash: {[key: string]: (req: any, res: any, next: ()=>void)=>void} = {};
             private _chain: Array<(req: any, res: any, next: ()=>void)=>void> = [];
 
             constructor(){
-                if (Http.HttpServer && Http.WebSocketServer) {
+                console.log("myrestify1");
+                if (http.HttpServer && http.WebSocketServer) {
+                    console.log("myrestify2");
                     // Listen for HTTP connections.
-                    this._webServer = new Http.HttpServer();
+                    this._webServer = new http.HttpServer();
                 }
             }
-            public use(method: (req: any, res: Http.HttpRequest, next: ()=>void)=>void){
+            public use(method: (req: any, res: http.HttpRequest, next: ()=>void)=>void){
                 this._chain.push(method);
             }
 
@@ -66,7 +68,7 @@ module If{
             }
 
             private _startListening(){
-                this._webServer.on('request', (req: Http.HttpRequest)=>{
+                this._webServer.on('request', (req: http.HttpRequest)=>{
                     var url = req.headers['url'].split("?")[0];
                     if(req.headers['method'] = 'GET') this._notifyGet(url, req);
                     else if(req.headers['method'] = 'POST') this._notifyPost(url, req);
@@ -74,19 +76,19 @@ module If{
                 });
             }
 
-            public get(path: string, callback: (req: Http.HttpRequest, res: any, next: ()=>void)=>void){
+            public get(path: string, callback: (req: http.HttpRequest, res: any, next: ()=>void)=>void){
                 var uriParser = new App.URIMatcher(path);
                 this._matcherArray.push(uriParser);
                 this._getCallbackHash[path] = callback;
             }
 
-            public post(path: string, callback: (req: Http.HttpRequest, res: any, next: ()=>void)=>void){
+            public post(path: string, callback: (req: http.HttpRequest, res: any, next: ()=>void)=>void){
                 var uriParser = new App.URIMatcher(path);
                 this._matcherArray.push(uriParser);
                 this._postCallbackHash[path] = callback;
             }
 
-            private _notifyGet(path: string, req: Http.HttpRequest){
+            private _notifyGet(path: string, req: http.HttpRequest){
                 var matchID = this._matchIndex(path);
                 if(matchID == -1) {
                     this._send404Message(req);
@@ -116,7 +118,7 @@ module If{
                 });
             }
 
-            private _notifyPost(path: string, req: Http.HttpRequest){
+            private _notifyPost(path: string, req: http.HttpRequest){
                 var matchID = this._matchIndex(path);
                 if(matchID == -1) {
                     this._send404Message(req);
@@ -174,15 +176,16 @@ module If{
 
             }
 
-            public webServer(): Http.HttpServer{
+            public webServer(): http.HttpServer{
+                console.log(this._webServer);
                 return this._webServer;
             }
 
-            public bodyParser(options: any): (req: any, res: Http.HttpRequest, next: ()=>void)=>void{
+            public bodyParser(options: any): (req: any, res: http.HttpRequest, next: ()=>void)=>void{
                 options = options || {};
                 options.bodyReader = true;
 
-                return function parseBody(req: any, res: Http.HttpRequest, next: ()=>void): void{
+                return function parseBody(req: any, res: http.HttpRequest, next: ()=>void): void{
                     if (req.method == 'HEAD') {
                         next();
                         return;
@@ -198,7 +201,7 @@ module If{
                 }
             }
 
-            public queryParser(): (req: any, res: Http.HttpRequest, next: ()=>void)=>void{
+            public queryParser(): (req: any, res: http.HttpRequest, next: ()=>void)=>void{
                 return (req: any, res: any, next: ()=>void)=>{
                     var paths = res.headers['url'].split("?");
                     var matchID = this._matchIndex(paths[0]);
@@ -210,8 +213,10 @@ module If{
             }
         }
 
-        export class WebSocketServer extends Http.WebSocketServer{
+        export class WebSocketServer extends http.WebSocketServer{
             constructor(params: any){
+                console.log("websocketserver");
+                console.log(params);
                 var myRestify: MyRestify = params.server;
                 super(myRestify.webServer());
             }
