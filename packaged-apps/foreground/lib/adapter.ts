@@ -46,8 +46,10 @@ class MyRestify{
 
         this._webServer.addEventListener('request', function(req: any) {
             console.log(req.headers['url']);
-            if(req.headers['method'] = 'GET') self._notifyGet(req.headers['url'], req);
-            else if(req.headers['method'] = 'POST') self._notifyPost(req.headers['url'], req);
+            var url = req.headers['url'].split("?")[0];
+            var request = new MyHttpRequest(req);
+            if(request.headers['method'] = 'GET') self._notifyGet(url, request);
+            else if(request.headers['method'] = 'POST') self._notifyPost(url, request);
             return true;
         });
     }
@@ -129,10 +131,12 @@ class MyRestify{
 
     private _matchIndex(path): number{
         console.log("matchindex");
+        console.log(path);
         var retValue = -1;
         for(var i = 0; i < this._matcherArray.length; i++){
             if(this._matcherArray[i].test(path)){
                 retValue = i;
+                console.log("matchindex " + i);
                 return retValue;
             }
         }
@@ -183,7 +187,7 @@ class MyRestify{
         return (req: any, res: any, next: ()=>void)=>{
             console.log(res.headers['url']);
             var paths = res.headers['url'].split("?");
-            console.log(paths);
+            console.log(paths[1]);
             var matchID = this._matchIndex(paths[0]);
             var matcher = this._matcherArray[matchID];
             console.log(matchID);
@@ -227,5 +231,26 @@ class url{
         var params: string[] = url.split("?");
         var paramArray: string[] = params[1].split("&");
         return parseItem(0, paramArray);
+    }
+}
+
+class MyHttpRequest{
+    private _request: any;
+    public headers: any;
+
+    constructor(request: any){
+        this._request = request;
+        this.headers = request.headers;
+    }
+
+    public setHeader(method: string, value: string){
+        this.headers[method] = value;
+    }
+
+    public send(message: string){
+        this.headers['Content-Type'] = this._request.contentType;
+        this.headers['Content-Length'] = "" + message.length;
+        this._request.writeHead(200, this.headers);
+        this._request.write(message);
     }
 }

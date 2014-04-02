@@ -198,7 +198,7 @@ PeerServer.prototype._initializeHTTP = function() {
     //PeerJS Original Code
     //this._app.post('/:key/:id/:token/id', function(req, res, next) {
     this._app.get('/:key/:id/:token/id', function(req, res, next) {
-        console.log("get");
+        console.log("get longtype");
         console.log(req.params);
         var id = req.params.id;
         var token = req.params.token;
@@ -212,6 +212,7 @@ PeerServer.prototype._initializeHTTP = function() {
                     self._ips[ip]++;
                     self._startStreaming(res, key, id, token, true);
                 } else {
+                    console.log("send httperror");
                     res.send(JSON.stringify({ type: 'HTTP-ERROR' }));
                 }
             });

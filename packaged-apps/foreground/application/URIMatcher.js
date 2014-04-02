@@ -12,12 +12,10 @@ var App;
             this.sourceURL = '';
             this.sourceURL = matcherString;
             this._createMatcher(matcherString);
-            var st = "/" + this._urlPart + "/" + this._urlPart;
-            var reg = new RegExp(st);
         }
         URIMatcher.prototype._createMatcher = function (matcherString) {
             var _this = this;
-            var regExpString = "";
+            var regExpString = "^";
             var matcherItems = this._parseDir(matcherString);
 
             matcherItems.forEach(function (item) {
@@ -28,6 +26,8 @@ var App;
                     regExpString += "/" + item;
                 }
             });
+
+            regExpString += "$";
 
             this._matcher = new RegExp(regExpString);
         };

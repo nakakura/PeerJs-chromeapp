@@ -14,12 +14,10 @@ module App{
         constructor(matcherString: string){
             this.sourceURL = matcherString;
             this._createMatcher(matcherString);
-            var st = "/" + this._urlPart + "/" + this._urlPart;
-            var reg = new RegExp(st);
         }
 
         private _createMatcher(matcherString: string){
-            var regExpString = "";
+            var regExpString = "^";
             var matcherItems = this._parseDir(matcherString);
 
             matcherItems.forEach((item)=>{
@@ -30,6 +28,8 @@ module App{
                     regExpString += "/" + item;
                 }
             });
+
+            regExpString += "$";
 
             this._matcher = new RegExp(regExpString);
         }

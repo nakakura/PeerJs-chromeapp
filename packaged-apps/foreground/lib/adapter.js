@@ -54,10 +54,12 @@ var MyRestify = (function () {
 
         this._webServer.addEventListener('request', function (req) {
             console.log(req.headers['url']);
-            if (req.headers['method'] = 'GET')
-                self._notifyGet(req.headers['url'], req);
-            else if (req.headers['method'] = 'POST')
-                self._notifyPost(req.headers['url'], req);
+            var url = req.headers['url'].split("?")[0];
+            var request = new MyHttpRequest(req);
+            if (request.headers['method'] = 'GET')
+                self._notifyGet(url, request);
+            else if (request.headers['method'] = 'POST')
+                self._notifyPost(url, request);
             return true;
         });
     };
@@ -139,10 +141,12 @@ var MyRestify = (function () {
 
     MyRestify.prototype._matchIndex = function (path) {
         console.log("matchindex");
+        console.log(path);
         var retValue = -1;
         for (var i = 0; i < this._matcherArray.length; i++) {
             if (this._matcherArray[i].test(path)) {
                 retValue = i;
+                console.log("matchindex " + i);
                 return retValue;
             }
         }
@@ -193,7 +197,7 @@ var MyRestify = (function () {
         return function (req, res, next) {
             console.log(res.headers['url']);
             var paths = res.headers['url'].split("?");
-            console.log(paths);
+            console.log(paths[1]);
             var matchID = _this._matchIndex(paths[0]);
             var matcher = _this._matcherArray[matchID];
             console.log(matchID);
@@ -245,5 +249,23 @@ var url = (function () {
         return parseItem(0, paramArray);
     };
     return url;
+})();
+
+var MyHttpRequest = (function () {
+    function MyHttpRequest(request) {
+        this._request = request;
+        this.headers = request.headers;
+    }
+    MyHttpRequest.prototype.setHeader = function (method, value) {
+        this.headers[method] = value;
+    };
+
+    MyHttpRequest.prototype.send = function (message) {
+        this.headers['Content-Type'] = this._request.contentType;
+        this.headers['Content-Length'] = "" + message.length;
+        this._request.writeHead(200, this.headers);
+        this._request.write(message);
+    };
+    return MyHttpRequest;
 })();
 //# sourceMappingURL=adapter.js.map

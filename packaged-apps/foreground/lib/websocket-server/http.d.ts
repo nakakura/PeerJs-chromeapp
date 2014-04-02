@@ -11,4 +11,8 @@ declare module http{
         constructor(server: Server);
         public addEventListener(eventName: string, callback: (any)=>void);
     }
+    export class HttpRequest{
+        constructor(headers: any, portNum: number);
+        public addEventListener(eventName: string, callback: (any)=>void);
+    }
 }
