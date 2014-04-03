@@ -15,14 +15,13 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      'foreground/application/URIMatcher.js',
+      'packaged-apps/foreground/application/URIMatcher.js',
       'test/**/*.js'
     ],
 
 
     // list of files to exclude
     exclude: [
-        'foreground/foreground.js',
         'background/background.js'
     ],
 

@@ -51,9 +51,7 @@ module If{
             private _chain: Array<(req: any, res: any, next: ()=>void)=>void> = [];
 
             constructor(){
-                console.log("myrestify1");
                 if (http.HttpServer && http.WebSocketServer) {
-                    console.log("myrestify2");
                     // Listen for HTTP connections.
                     this._webServer = new http.HttpServer();
                 }
@@ -65,12 +63,12 @@ module If{
             public listen(port: number){
                 this._webServer.listen(port);
                 this._startListening();
+                this._notifyGet = this._notifier(this._getCallbackHash);
+                this._notifyPost = this._notifier(this._postCallbackHash);
             }
 
             private _startListening(){
                 this._webServer.on('request', (req: http.HttpRequest)=>{
-                    console.log(req.headers['url']);
-                    console.log(req.headers['method']);
                     var url = req.headers['url'].split("?")[0];
                     if(req.headers['method'] == 'GET') this._notifyGet(url, req);
                     else if(req.headers['method'] == 'POST') this._notifyPost(url, req);
@@ -90,69 +88,38 @@ module If{
                 this._postCallbackHash[path] = callback;
             }
 
-            private _notifyGet(path: string, req: http.HttpRequest){
-                var matchID = this._matchIndex(path);
-                if(matchID == -1) {
-                    this._send404Message(req);
-                    return;
-                }
-                var matcher = this._matcherArray[matchID];
-                var _applyChain = (counter: number, req: any, res: any,
-                                   callback: (req:any, res: any, next: ()=>void)=>void)=>{
-                    if(counter >= this._chain.length){
-                        callback(req, res, ()=>{
-                            console.log("finish chain");
-                            //res.checkFinished_();
-                        });
+            private _notifyGet(path: string, req: http.HttpRequest){ }
+
+            private _notifyPost(path: string, req: http.HttpRequest){ }
+
+            private _notifier(callbackHash: {[key: string]: (req: any, res: any, next: ()=>void)=>void}){
+                return (path: string, req: http.HttpRequest)=>{
+                    var matchID = this._matchIndex(path);
+                    if(matchID == -1) {
+                        this._send404Message(req);
                         return;
                     }
+                    var matcher = this._matcherArray[matchID];
+                    var _applyChain = (counter: number, req: any, res: any,
+                                       callback: (req:any, res: any, next: ()=>void)=>void)=>{
+                        if(counter >= this._chain.length){
+                            callback(req, res, ()=>{ });
+                            return;
+                        }
 
-                    this._chain[counter](req, res, ()=>{
-                        _applyChain(counter + 1, req, res, callback);
-                    });
-                };
-
-                var options: any = {};
-                options['method'] = req.headers['method'];
-                options.connection = {};
-                options.connection.remoteAddress = req.remoteAddress;
-                _applyChain(0, options, req, (req: any, res: any, next: ()=>void)=>{
-                    console.log("applychain");
-                    console.log(matcher.sourceURL);
-                    console.log(this._getCallbackHash);
-                    this._getCallbackHash[matcher.sourceURL](req, res, next);
-                    console.log("applychain - 2");
-                });
-            }
-
-            private _notifyPost(path: string, req: http.HttpRequest){
-                var matchID = this._matchIndex(path);
-                if(matchID == -1) {
-                    this._send404Message(req);
-                    return;
-                }
-                var matcher = this._matcherArray[matchID];
-                var _applyChain = (counter: number, req: any, res: any,
-                                   callback: (req:any, res: any, next: ()=>void)=>void)=>{
-                    if(counter >= this._chain.length){
-                        callback(req, res, ()=>{
-                            //res.checkFinished_();
+                        this._chain[counter](req, res, ()=>{
+                            _applyChain(counter + 1, req, res, callback);
                         });
-                        return;
-                    }
+                    };
 
-                    this._chain[counter](req, res, ()=>{
-                        _applyChain(counter + 1, req, res, callback);
+                    var options: any = {};
+                    options['method'] = req.headers['method'];
+                    options.connection = {};
+                    options.connection.remoteAddress = req.remoteAddress;
+                    _applyChain(0, options, req, (req: any, res: any, next: ()=>void)=>{
+                        callbackHash[matcher.sourceURL](req, res, next);
                     });
                 };
-
-                var options: any = {};
-                options['method'] = req.headers['method'];
-                options.connection = {};
-                options.connection.remoteAddress = req.remoteAddress;
-                _applyChain(0, options, req, (req: any, res: any, next: ()=>void)=>{
-                    this._postCallbackHash[matcher.sourceURL](req, res, next);
-                });
             }
 
             private _matchIndex(path): number{
@@ -184,7 +151,6 @@ module If{
             }
 
             public webServer(): http.HttpServer{
-                console.log(this._webServer);
                 return this._webServer;
             }
 
@@ -193,7 +159,6 @@ module If{
                 options.bodyReader = true;
 
                 return function parseBody(req: any, res: http.HttpRequest, next: ()=>void): void{
-                    console.log("body parser 1");
                     if (req.method == 'HEAD') {
                         next();
                         return;
@@ -215,9 +180,7 @@ module If{
                     var matchID = this._matchIndex(paths[0]);
                     var matcher = this._matcherArray[matchID];
                     req.params = {};
-                    console.log("query parser1");
                     matcher.match(res.headers['url'], req.params);
-                    console.log("query parser2");
                     next();
                 };
             }
@@ -225,8 +188,6 @@ module If{
 
         export class WebSocketServer extends http.WebSocketServer{
             constructor(params: any){
-                console.log("websocketserver");
-                console.log(params);
                 var myRestify: MyRestify = params.server;
                 super(myRestify.webServer());
             }

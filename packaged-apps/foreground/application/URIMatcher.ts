@@ -59,7 +59,6 @@ module App{
 
         public match(url: string, retHash:{[key: string]: string}): boolean{
             var targetURI = url.split("?")[0];
-            console.log("target " + targetURI);
             if(!this._matcher.test(targetURI)) return false;
             var matchedItems = this._matcher.exec(targetURI);
 
@@ -69,7 +68,6 @@ module App{
 
             var items = this._parseDir(targetURI);
             var fileName = items[items.length - 1];
-            console.log(fileName);
 
             return true;
         }

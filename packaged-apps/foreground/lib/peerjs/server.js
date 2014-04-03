@@ -73,7 +73,6 @@ PeerServer.prototype._initializeWSS = function() {
   this._wss = new If.Adapter.WebSocketServer({ path: this._options.path + 'peerjs', server: this._app});
 
   this._wss.on('connection', function(socket) {
-      console.log("wss on");
     var query = url.parse(socket.upgradeReq.url, true).query;
     var id = query.id;
     var token = query.token;
@@ -200,16 +199,13 @@ PeerServer.prototype._initializeHTTP = function() {
 
   // Retrieve guaranteed random ID.
   this._app.get(this._options.path + ':key/id', function(req, res, next) {
-      console.log(":key/id");
     res.contentType = 'text/html';
     res.send(self._generateClientId(req.params.key));
-      console.log("send");
     return next();
   });
 
   // Server sets up HTTP streaming when you get post an ID.
   this._app.post(this._options.path + ':key/:id/:token/id', function(req, res, next) {
-      console.log("post :key/:id/:token/id");
     var id = req.params.id;
     var token = req.params.token;
     var key = req.params.key;
@@ -233,7 +229,6 @@ PeerServer.prototype._initializeHTTP = function() {
 
   // Get a list of all peers for a key, enabled by the `allowDiscovery` flag.
   this._app.get(this._options.path + ':key/peers', function(req, res, next) {
-      console.log("get :key/peers");
     var key = req.params.key;
     if (self._clients[key]) {
       self._checkAllowsDiscovery(key, function(isAllowed) {

@@ -101,7 +101,6 @@ var http;
                 if (opt_host.length > 0)
                     address = opt_host[0];
                 chrome.runtime.getBackgroundPage(function (bgPage) {
-                    console.log(bgPage.oldSocketId);
                     if (bgPage.oldSocketId !== undefined) {
                         chrome.socket.disconnect(bgPage.oldSocketId);
                         chrome.socket.destroy(bgPage.oldSocketId);
@@ -520,7 +519,7 @@ var http;
 
         WebSocketServerSocket.prototype._onFrame = function (op, data) {
             if (op == 1) {
-                this.dispatchEvent('message', { 'data': data });
+                this.dispatchEvent('message', data);
             } else if (op == 8) {
                 // A close message must be confirmed before the http is closed.
                 if (this.readyState == 1) {

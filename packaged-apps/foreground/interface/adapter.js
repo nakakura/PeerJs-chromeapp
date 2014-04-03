@@ -65,10 +65,7 @@ var If;
                 this._getCallbackHash = {};
                 this._postCallbackHash = {};
                 this._chain = [];
-                console.log("myrestify1");
                 if (http.HttpServer && http.WebSocketServer) {
-                    console.log("myrestify2");
-
                     // Listen for HTTP connections.
                     this._webServer = new http.HttpServer();
                 }
@@ -80,13 +77,13 @@ var If;
             MyRestify.prototype.listen = function (port) {
                 this._webServer.listen(port);
                 this._startListening();
+                this._notifyGet = this._notifier(this._getCallbackHash);
+                this._notifyPost = this._notifier(this._postCallbackHash);
             };
 
             MyRestify.prototype._startListening = function () {
                 var _this = this;
                 this._webServer.on('request', function (req) {
-                    console.log(req.headers['url']);
-                    console.log(req.headers['method']);
                     var url = req.headers['url'].split("?")[0];
                     if (req.headers['method'] == 'GET')
                         _this._notifyGet(url, req);
@@ -109,68 +106,40 @@ var If;
             };
 
             MyRestify.prototype._notifyGet = function (path, req) {
-                var _this = this;
-                var matchID = this._matchIndex(path);
-                if (matchID == -1) {
-                    this._send404Message(req);
-                    return;
-                }
-                var matcher = this._matcherArray[matchID];
-                var _applyChain = function (counter, req, res, callback) {
-                    if (counter >= _this._chain.length) {
-                        callback(req, res, function () {
-                            console.log("finish chain");
-                            //res.checkFinished_();
-                        });
-                        return;
-                    }
-
-                    _this._chain[counter](req, res, function () {
-                        _applyChain(counter + 1, req, res, callback);
-                    });
-                };
-
-                var options = {};
-                options['method'] = req.headers['method'];
-                options.connection = {};
-                options.connection.remoteAddress = req.remoteAddress;
-                _applyChain(0, options, req, function (req, res, next) {
-                    console.log("applychain");
-                    console.log(matcher.sourceURL);
-                    console.log(_this._getCallbackHash);
-                    _this._getCallbackHash[matcher.sourceURL](req, res, next);
-                    console.log("applychain - 2");
-                });
             };
 
             MyRestify.prototype._notifyPost = function (path, req) {
+            };
+
+            MyRestify.prototype._notifier = function (callbackHash) {
                 var _this = this;
-                var matchID = this._matchIndex(path);
-                if (matchID == -1) {
-                    this._send404Message(req);
-                    return;
-                }
-                var matcher = this._matcherArray[matchID];
-                var _applyChain = function (counter, req, res, callback) {
-                    if (counter >= _this._chain.length) {
-                        callback(req, res, function () {
-                            //res.checkFinished_();
-                        });
+                return function (path, req) {
+                    var matchID = _this._matchIndex(path);
+                    if (matchID == -1) {
+                        _this._send404Message(req);
                         return;
                     }
+                    var matcher = _this._matcherArray[matchID];
+                    var _applyChain = function (counter, req, res, callback) {
+                        if (counter >= _this._chain.length) {
+                            callback(req, res, function () {
+                            });
+                            return;
+                        }
 
-                    _this._chain[counter](req, res, function () {
-                        _applyChain(counter + 1, req, res, callback);
+                        _this._chain[counter](req, res, function () {
+                            _applyChain(counter + 1, req, res, callback);
+                        });
+                    };
+
+                    var options = {};
+                    options['method'] = req.headers['method'];
+                    options.connection = {};
+                    options.connection.remoteAddress = req.remoteAddress;
+                    _applyChain(0, options, req, function (req, res, next) {
+                        callbackHash[matcher.sourceURL](req, res, next);
                     });
                 };
-
-                var options = {};
-                options['method'] = req.headers['method'];
-                options.connection = {};
-                options.connection.remoteAddress = req.remoteAddress;
-                _applyChain(0, options, req, function (req, res, next) {
-                    _this._postCallbackHash[matcher.sourceURL](req, res, next);
-                });
             };
 
             MyRestify.prototype._matchIndex = function (path) {
@@ -201,7 +170,6 @@ var If;
             };
 
             MyRestify.prototype.webServer = function () {
-                console.log(this._webServer);
                 return this._webServer;
             };
 
@@ -210,7 +178,6 @@ var If;
                 options.bodyReader = true;
 
                 return function parseBody(req, res, next) {
-                    console.log("body parser 1");
                     if (req.method == 'HEAD') {
                         next();
                         return;
@@ -233,9 +200,7 @@ var If;
                     var matchID = _this._matchIndex(paths[0]);
                     var matcher = _this._matcherArray[matchID];
                     req.params = {};
-                    console.log("query parser1");
                     matcher.match(res.headers['url'], req.params);
-                    console.log("query parser2");
                     next();
                 };
             };
@@ -246,8 +211,6 @@ var If;
         var WebSocketServer = (function (_super) {
             __extends(WebSocketServer, _super);
             function WebSocketServer(params) {
-                console.log("websocketserver");
-                console.log(params);
                 var myRestify = params.server;
                 _super.call(this, myRestify.webServer());
             }
