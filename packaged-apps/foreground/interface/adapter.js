@@ -85,10 +85,12 @@ var If;
             MyRestify.prototype._startListening = function () {
                 var _this = this;
                 this._webServer.on('request', function (req) {
+                    console.log(req.headers['url']);
+                    console.log(req.headers['method']);
                     var url = req.headers['url'].split("?")[0];
-                    if (req.headers['method'] = 'GET')
+                    if (req.headers['method'] == 'GET')
                         _this._notifyGet(url, req);
-                    else if (req.headers['method'] = 'POST')
+                    else if (req.headers['method'] == 'POST')
                         _this._notifyPost(url, req);
                     return true;
                 });
@@ -117,6 +119,7 @@ var If;
                 var _applyChain = function (counter, req, res, callback) {
                     if (counter >= _this._chain.length) {
                         callback(req, res, function () {
+                            console.log("finish chain");
                             //res.checkFinished_();
                         });
                         return;
@@ -132,7 +135,11 @@ var If;
                 options.connection = {};
                 options.connection.remoteAddress = req.remoteAddress;
                 _applyChain(0, options, req, function (req, res, next) {
+                    console.log("applychain");
+                    console.log(matcher.sourceURL);
+                    console.log(_this._getCallbackHash);
                     _this._getCallbackHash[matcher.sourceURL](req, res, next);
+                    console.log("applychain - 2");
                 });
             };
 
@@ -203,6 +210,7 @@ var If;
                 options.bodyReader = true;
 
                 return function parseBody(req, res, next) {
+                    console.log("body parser 1");
                     if (req.method == 'HEAD') {
                         next();
                         return;
@@ -225,7 +233,9 @@ var If;
                     var matchID = _this._matchIndex(paths[0]);
                     var matcher = _this._matcherArray[matchID];
                     req.params = {};
+                    console.log("query parser1");
                     matcher.match(res.headers['url'], req.params);
+                    console.log("query parser2");
                     next();
                 };
             };

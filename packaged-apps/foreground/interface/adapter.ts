@@ -69,9 +69,11 @@ module If{
 
             private _startListening(){
                 this._webServer.on('request', (req: http.HttpRequest)=>{
+                    console.log(req.headers['url']);
+                    console.log(req.headers['method']);
                     var url = req.headers['url'].split("?")[0];
-                    if(req.headers['method'] = 'GET') this._notifyGet(url, req);
-                    else if(req.headers['method'] = 'POST') this._notifyPost(url, req);
+                    if(req.headers['method'] == 'GET') this._notifyGet(url, req);
+                    else if(req.headers['method'] == 'POST') this._notifyPost(url, req);
                     return true;
                 });
             }
@@ -99,6 +101,7 @@ module If{
                                    callback: (req:any, res: any, next: ()=>void)=>void)=>{
                     if(counter >= this._chain.length){
                         callback(req, res, ()=>{
+                            console.log("finish chain");
                             //res.checkFinished_();
                         });
                         return;
@@ -114,7 +117,11 @@ module If{
                 options.connection = {};
                 options.connection.remoteAddress = req.remoteAddress;
                 _applyChain(0, options, req, (req: any, res: any, next: ()=>void)=>{
+                    console.log("applychain");
+                    console.log(matcher.sourceURL);
+                    console.log(this._getCallbackHash);
                     this._getCallbackHash[matcher.sourceURL](req, res, next);
+                    console.log("applychain - 2");
                 });
             }
 
@@ -186,6 +193,7 @@ module If{
                 options.bodyReader = true;
 
                 return function parseBody(req: any, res: http.HttpRequest, next: ()=>void): void{
+                    console.log("body parser 1");
                     if (req.method == 'HEAD') {
                         next();
                         return;
@@ -207,7 +215,9 @@ module If{
                     var matchID = this._matchIndex(paths[0]);
                     var matcher = this._matcherArray[matchID];
                     req.params = {};
+                    console.log("query parser1");
                     matcher.match(res.headers['url'], req.params);
+                    console.log("query parser2");
                     next();
                 };
             }
